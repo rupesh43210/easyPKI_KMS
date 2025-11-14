@@ -1,10 +1,11 @@
 {
-    "git.autoRepositoryDetection": "subFolders",
-    "git.ignoredRepositories": [
-        "../"
+    "git.enabled": true,
+    "git.autoRepositoryDetection": false,
+    "git.repositories": [
+        "${workspaceFolder}"
     ],
+    "git.ignoredRepositories": [],
     "git.detectSubmodules": false,
-    "files.exclude": {
-        "**/.git": false
-    }
+    "git.scanRepositories": [],
+    "scm.defaultViewMode": "tree"
 }
