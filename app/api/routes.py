@@ -642,6 +642,392 @@ def api_docs():
             },
             'system': {
                 'GET /api/v1/stats': 'Get system statistics'
+            },
+            'gpg': {
+                'GET /api/v1/gpg/keys': 'List all GPG keys',
+                'POST /api/v1/gpg/keys': 'Generate a new GPG key',
+                'GET /api/v1/gpg/keys/<fingerprint>': 'Get GPG key details',
+                'GET /api/v1/gpg/keys/<fingerprint>/export': 'Export GPG public key',
+                'POST /api/v1/gpg/keys/import': 'Import GPG key',
+                'DELETE /api/v1/gpg/keys/<fingerprint>': 'Delete GPG key',
+                'POST /api/v1/gpg/encrypt': 'Encrypt data with GPG',
+                'POST /api/v1/gpg/decrypt': 'Decrypt GPG encrypted data',
+                'POST /api/v1/gpg/sign': 'Sign data with GPG',
+                'POST /api/v1/gpg/verify': 'Verify GPG signature'
             }
         }
     })
+
+
+# ============= GPG APIs =============
+
+@api_bp.route('/gpg/keys', methods=['GET'])
+@api_key_required
+def list_gpg_keys():
+    """List all GPG keys"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        secret = request.args.get('secret', 'false').lower() == 'true'
+        keys = gpg.list_keys(secret=secret)
+        
+        AuditLog.log_event(
+            username=current_user.username,
+            event_type='gpg_key',
+            action=f'list_{'private' if secret else 'public'}_keys',
+            status='success'
+        )
+        
+        return jsonify({
+            'success': True,
+            'count': len(keys),
+            'keys': keys
+        })
+    
+    except Exception as e:
+        AuditLog.log_event(
+            username=current_user.username,
+            event_type='gpg_key',
+            action='list_keys',
+            status='failure',
+            details={'error': str(e)}
+        )
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/keys', methods=['POST'])
+@api_key_required
+def generate_gpg_key():
+    """Generate a new GPG key pair"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        required = ['name', 'email']
+        for field in required:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        result = gpg.generate_key(
+            name_real=data['name'],
+            name_email=data['email'],
+            name_comment=data.get('comment', ''),
+            key_type=data.get('key_type', 'RSA'),
+            key_length=data.get('key_length', 4096),
+            expire_date=data.get('expire_date', '0'),
+            passphrase=data.get('passphrase')
+        )
+        
+        if result.get('success'):
+            AuditLog.log_event(
+                username=current_user.username,
+                event_type='gpg_key',
+                action='generate_key',
+                status='success',
+                details={
+                    'fingerprint': result['fingerprint'],
+                    'email': data['email']
+                }
+            )
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        AuditLog.log_event(
+            username=current_user.username,
+            event_type='gpg_key',
+            action='generate_key',
+            status='failure',
+            details={'error': str(e)}
+        )
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/keys/<fingerprint>', methods=['GET'])
+@api_key_required
+def get_gpg_key(fingerprint):
+    """Get GPG key details"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        secret = request.args.get('secret', 'false').lower() == 'true'
+        key_info = gpg.get_key_info(fingerprint, secret=secret)
+        
+        if not key_info:
+            return jsonify({'error': 'Key not found'}), 404
+        
+        AuditLog.log_event(
+            username=current_user.username,
+            event_type='gpg_key',
+            action='get_key_info',
+            status='success',
+            details={'fingerprint': fingerprint}
+        )
+        
+        return jsonify({
+            'success': True,
+            'key': key_info
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/keys/<fingerprint>/export', methods=['GET'])
+@api_key_required
+def export_gpg_key(fingerprint):
+    """Export GPG public key"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        secret = request.args.get('secret', 'false').lower() == 'true'
+        passphrase = request.args.get('passphrase')
+        
+        if secret:
+            key_data = gpg.export_private_key(fingerprint, passphrase=passphrase)
+        else:
+            key_data = gpg.export_public_key(fingerprint)
+        
+        if not key_data:
+            return jsonify({'error': 'Key not found or incorrect passphrase'}), 404
+        
+        AuditLog.log_event(
+            username=current_user.username,
+            event_type='gpg_key',
+            action=f'export_{'private' if secret else 'public'}_key',
+            status='success',
+            details={'fingerprint': fingerprint}
+        )
+        
+        return jsonify({
+            'success': True,
+            'fingerprint': fingerprint,
+            'key_data': key_data
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/keys/import', methods=['POST'])
+@api_key_required
+def import_gpg_key():
+    """Import GPG key"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        data = request.get_json()
+        
+        if 'key_data' not in data:
+            return jsonify({'error': 'Missing required field: key_data'}), 400
+        
+        result = gpg.import_key(data['key_data'])
+        
+        if result.get('success'):
+            AuditLog.log_event(
+                username=current_user.username,
+                event_type='gpg_key',
+                action='import_key',
+                status='success',
+                details={'count': result['count']}
+            )
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/keys/<fingerprint>', methods=['DELETE'])
+@api_key_required
+def delete_gpg_key(fingerprint):
+    """Delete GPG key"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        data = request.get_json() or {}
+        secret = data.get('secret', False)
+        passphrase = data.get('passphrase')
+        
+        success = gpg.delete_key(fingerprint, secret=secret, passphrase=passphrase)
+        
+        if success:
+            AuditLog.log_event(
+                username=current_user.username,
+                event_type='gpg_key',
+                action='delete_key',
+                status='success',
+                details={'fingerprint': fingerprint}
+            )
+            return jsonify({'success': True, 'message': 'Key deleted'})
+        else:
+            return jsonify({'error': 'Failed to delete key'}), 400
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/encrypt', methods=['POST'])
+@api_key_required
+def gpg_encrypt():
+    """Encrypt data with GPG"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        data = request.get_json()
+        
+        if 'data' not in data or 'recipients' not in data:
+            return jsonify({'error': 'Missing required fields: data, recipients'}), 400
+        
+        encrypted = gpg.encrypt(
+            data=data['data'],
+            recipients=data['recipients'],
+            armor=data.get('armor', True),
+            sign=data.get('sign'),
+            passphrase=data.get('passphrase')
+        )
+        
+        if encrypted:
+            AuditLog.log_event(
+                username=current_user.username,
+                event_type='gpg_encrypt',
+                action='encrypt_data',
+                status='success',
+                details={'recipients': len(data['recipients'])}
+            )
+            return jsonify({
+                'success': True,
+                'encrypted_data': encrypted
+            })
+        else:
+            return jsonify({'error': 'Encryption failed'}), 400
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/decrypt', methods=['POST'])
+@api_key_required
+def gpg_decrypt():
+    """Decrypt GPG encrypted data"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        data = request.get_json()
+        
+        if 'encrypted_data' not in data:
+            return jsonify({'error': 'Missing required field: encrypted_data'}), 400
+        
+        decrypted, metadata = gpg.decrypt(
+            encrypted_data=data['encrypted_data'],
+            passphrase=data.get('passphrase')
+        )
+        
+        if decrypted:
+            AuditLog.log_event(
+                username=current_user.username,
+                event_type='gpg_decrypt',
+                action='decrypt_data',
+                status='success',
+                details={'key_id': metadata.get('key_id')}
+            )
+            return jsonify({
+                'success': True,
+                'decrypted_data': decrypted,
+                'metadata': metadata
+            })
+        else:
+            return jsonify({'error': metadata.get('error', 'Decryption failed')}), 400
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/sign', methods=['POST'])
+@api_key_required
+def gpg_sign():
+    """Sign data with GPG"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        data = request.get_json()
+        
+        if 'data' not in data or 'keyid' not in data:
+            return jsonify({'error': 'Missing required fields: data, keyid'}), 400
+        
+        signature = gpg.sign(
+            data=data['data'],
+            keyid=data['keyid'],
+            passphrase=data.get('passphrase'),
+            detach=data.get('detach', True),
+            clearsign=data.get('clearsign', False)
+        )
+        
+        if signature:
+            AuditLog.log_event(
+                username=current_user.username,
+                event_type='gpg_sign',
+                action='sign_data',
+                status='success',
+                details={'keyid': data['keyid']}
+            )
+            return jsonify({
+                'success': True,
+                'signature': signature
+            })
+        else:
+            return jsonify({'error': 'Signing failed'}), 400
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/gpg/verify', methods=['POST'])
+@api_key_required
+def gpg_verify():
+    """Verify GPG signature"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        data = request.get_json()
+        
+        if 'signed_data' not in data:
+            return jsonify({'error': 'Missing required field: signed_data'}), 400
+        
+        result = gpg.verify(
+            signed_data=data['signed_data'],
+            signature=data.get('signature')
+        )
+        
+        AuditLog.log_event(
+            username=current_user.username,
+            event_type='gpg_verify',
+            action='verify_signature',
+            status='success' if result.get('valid') else 'failure',
+            details={
+                'valid': result.get('valid'),
+                'fingerprint': result.get('fingerprint')
+            }
+        )
+        
+        return jsonify({
+            'success': True,
+            'verification': result
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
