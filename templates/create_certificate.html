@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Create Certificate{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-certificate"></i> Create New Certificate</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('web.create_certificate') }}">
+                        <!-- Certificate Type -->
+                        <div class="mb-3">
+                            <label for="cert_type" class="form-label">Certificate Type *</label>
+                            <select class="form-select" id="cert_type" name="cert_type" required>
+                                <option value="">Select certificate type...</option>
+                                <option value="server">Server (TLS/SSL)</option>
+                                <option value="client">Client Authentication</option>
+                                <option value="email">Email (S/MIME)</option>
+                                <option value="code_signing">Code Signing</option>
+                            </select>
+                            <small class="form-text text-muted">Choose the type of certificate to generate</small>
+                        </div>
+
+                        <!-- Common Name -->
+                        <div class="mb-3">
+                            <label for="common_name" class="form-label">Common Name (CN) *</label>
+                            <input type="text" class="form-control" id="common_name" name="common_name" required
+                                   placeholder="e.g., server.example.com or user@example.com">
+                            <small class="form-text text-muted">
+                                For server certs: domain name (e.g., www.example.com)<br>
+                                For client/email: username or email address
+                            </small>
+                        </div>
+
+                        <!-- Subject Alternative Names -->
+                        <div class="mb-3">
+                            <label for="san_list" class="form-label">Subject Alternative Names (SAN)</label>
+                            <textarea class="form-control" id="san_list" name="san_list" rows="3"
+                                      placeholder="One per line, e.g.:&#10;www.example.com&#10;api.example.com&#10;mail.example.com"></textarea>
+                            <small class="form-text text-muted">Additional domain names or IP addresses (optional)</small>
+                        </div>
+
+                        <!-- Organization Details -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="organization" class="form-label">Organization</label>
+                                <input type="text" class="form-control" id="organization" name="organization"
+                                       placeholder="e.g., Your Company Inc">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="organizational_unit" class="form-label">Organizational Unit</label>
+                                <input type="text" class="form-control" id="organizational_unit" name="organizational_unit"
+                                       placeholder="e.g., IT Department">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="country" class="form-label">Country Code</label>
+                                <input type="text" class="form-control" id="country" name="country" maxlength="2"
+                                       placeholder="e.g., US">
+                                <small class="form-text text-muted">2-letter code</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="state" class="form-label">State/Province</label>
+                                <input type="text" class="form-control" id="state" name="state"
+                                       placeholder="e.g., California">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="locality" class="form-label">City/Locality</label>
+                                <input type="text" class="form-control" id="locality" name="locality"
+                                       placeholder="e.g., San Francisco">
+                            </div>
+                        </div>
+
+                        <!-- Key Configuration -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="key_size" class="form-label">Key Size *</label>
+                                <select class="form-select" id="key_size" name="key_size" required>
+                                    <option value="2048">2048 bits (Standard)</option>
+                                    <option value="3072">3072 bits (High Security)</option>
+                                    <option value="4096" selected>4096 bits (Maximum Security)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="validity_days" class="form-label">Validity Period (Days) *</label>
+                                <input type="number" class="form-control" id="validity_days" name="validity_days"
+                                       value="365" min="1" max="7300" required>
+                                <small class="form-text text-muted">Certificate validity period (1-7300 days)</small>
+                            </div>
+                        </div>
+
+                        <!-- Email (for notification) -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   placeholder="admin@example.com">
+                            <small class="form-text text-muted">For certificate notifications (optional)</small>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{{ url_for('web.certificates') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-certificate"></i> Generate Certificate
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Certificate Types Guide</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><strong>Server (TLS/SSL)</strong></h6>
+                            <p class="small">For web servers, API endpoints, HTTPS connections. CN should be the domain name.</p>
+                            
+                            <h6><strong>Client Authentication</strong></h6>
+                            <p class="small">For authenticating users or devices. CN is typically the username or device ID.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><strong>Email (S/MIME)</strong></h6>
+                            <p class="small">For secure email communication. CN should be the email address.</p>
+                            
+                            <h6><strong>Code Signing</strong></h6>
+                            <p class="small">For signing software, scripts, or executables. CN is typically the organization or developer name.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

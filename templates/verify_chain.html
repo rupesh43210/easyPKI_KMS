@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Certificate Chain{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-shield-alt"></i> Certificate Chain Verification</h2>
+                    <p class="text-muted">Certificate: {{ certificate.common_name }}</p>
+                </div>
+                <a href="{{ url_for('web.certificate_detail', cert_id=certificate.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Certificate
+                </a>
+            </div>
+
+            <!-- Verification Result Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header {% if verification.valid %}bg-success{% else %}bg-danger{% endif %} text-white">
+                    <h4 class="mb-0">
+                        {% if verification.valid %}
+                            <i class="fas fa-check-circle"></i> Chain Verification: VALID
+                        {% else %}
+                            <i class="fas fa-times-circle"></i> Chain Verification: INVALID
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if verification.valid %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> 
+                            <strong>Certificate chain is valid and trusted.</strong>
+                            <p class="mb-0 mt-2">This certificate has a valid chain of trust through your Certificate Authority.</p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            <strong>Certificate chain verification failed!</strong>
+                            <p class="mb-0 mt-2">This certificate does not have a valid chain of trust.</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Errors -->
+                    {% if verification.errors %}
+                        <div class="mt-3">
+                            <h5 class="text-danger"><i class="fas fa-exclamation-circle"></i> Errors Found:</h5>
+                            <ul class="list-group">
+                                {% for error in verification.errors %}
+                                    <li class="list-group-item list-group-item-danger">
+                                        <i class="fas fa-times"></i> {{ error }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <!-- Warnings -->
+                    {% if verification.warnings %}
+                        <div class="mt-3">
+                            <h5 class="text-warning"><i class="fas fa-exclamation-triangle"></i> Warnings:</h5>
+                            <ul class="list-group">
+                                {% for warning in verification.warnings %}
+                                    <li class="list-group-item list-group-item-warning">
+                                        <i class="fas fa-exclamation"></i> {{ warning }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Chain of Trust Visualization -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-sitemap"></i> Chain of Trust</h5>
+                </div>
+                <div class="card-body">
+                    {% if verification.chain %}
+                        <div class="chain-visualization">
+                            {% for i in range(verification.chain|length) %}
+                                <div class="chain-level text-center mb-3">
+                                    {% if i == 0 %}
+                                        <div class="badge bg-primary p-3 fs-6">
+                                            <i class="fas fa-certificate"></i> {{ verification.chain[i] }}
+                                        </div>
+                                    {% elif i == verification.chain|length - 1 %}
+                                        <div class="badge bg-success p-3 fs-6">
+                                            <i class="fas fa-crown"></i> {{ verification.chain[i] }}
+                                        </div>
+                                    {% else %}
+                                        <div class="badge bg-info p-3 fs-6">
+                                            <i class="fas fa-link"></i> {{ verification.chain[i] }}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if i < verification.chain|length - 1 %}
+                                        <div class="mt-2 mb-2">
+                                            <i class="fas fa-arrow-down fa-2x text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Chain information not available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Detailed Verification Results -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Detailed Verification Results</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th width="40%">Check</th>
+                                <th width="20%">Status</th>
+                                <th width="40%">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Certificate Type</strong></td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        {{ verification.details.get('certificate_type', 'Unknown') }}
+                                    </span>
+                                </td>
+                                <td>{{ certificate.cert_type|title }}</td>
+                            </tr>
+                            
+                            {% if verification.details.get('signed_by_intermediate') is not none %}
+                            <tr>
+                                <td><strong>Signed by Intermediate CA</strong></td>
+                                <td>
+                                    {% if verification.details.signed_by_intermediate %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Valid</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Invalid</span>
+                                    {% endif %}
+                                </td>
+                                <td>Signature verification against Intermediate CA</td>
+                            </tr>
+                            {% endif %}
+                            
+                            {% if verification.details.get('intermediate_signed_by_root') is not none %}
+                            <tr>
+                                <td><strong>Intermediate CA Signed by Root</strong></td>
+                                <td>
+                                    {% if verification.details.intermediate_signed_by_root %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Valid</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Invalid</span>
+                                    {% endif %}
+                                </td>
+                                <td>Chain of trust to Root CA</td>
+                            </tr>
+                            {% endif %}
+                            
+                            <tr>
+                                <td><strong>Validity Period</strong></td>
+                                <td>
+                                    {% if verification.details.get('validity_ok') %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Valid</span>
+                                    {% elif verification.details.get('expired') %}
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Expired</span>
+                                    {% elif verification.details.get('not_yet_valid') %}
+                                        <span class="badge bg-warning"><i class="fas fa-clock"></i> Not Yet Valid</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    Valid from: {{ verification.details.get('not_before', 'N/A') }}<br>
+                                    Valid until: {{ verification.details.get('not_after', 'N/A') }}
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td><strong>Self-Signed</strong></td>
+                                <td>
+                                    {% if verification.details.get('self_signed') %}
+                                        <span class="badge bg-warning">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-success">No</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if verification.details.get('self_signed') %}
+                                        Self-signed Root CA certificate
+                                    {% else %}
+                                        Properly signed by Certificate Authority ✓
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td><strong>Signature Algorithm</strong></td>
+                                <td colspan="2">
+                                    <code>{{ verification.details.get('signature_algorithm', 'Unknown') }}</code>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Certificate Details -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-certificate"></i> Certificate Details</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="30%">Subject:</th>
+                            <td><code>{{ verification.details.get('subject', certificate.subject) }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Issuer:</th>
+                            <td><code>{{ verification.details.get('issuer', certificate.issuer) }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Serial Number:</th>
+                            <td><code>{{ verification.details.get('serial_number', certificate.serial_number) }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Key Algorithm:</th>
+                            <td>{{ certificate.key_algorithm }} {{ certificate.key_size }} bits</td>
+                        </tr>
+                        <tr>
+                            <th>Hash Algorithm:</th>
+                            <td>{{ certificate.hash_algorithm }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                <span class="badge {% if certificate.status == 'active' %}bg-success{% elif certificate.status == 'revoked' %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {{ certificate.status|upper }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-4 d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ url_for('web.certificate_detail', cert_id=certificate.id) }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Certificate
+                </a>
+                <a href="{{ url_for('web.certificates') }}" class="btn btn-secondary">
+                    <i class="fas fa-list"></i> All Certificates
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chain-visualization {
+    padding: 20px;
+}
+.chain-level {
+    position: relative;
+}
+</style>
+{% endblock %}

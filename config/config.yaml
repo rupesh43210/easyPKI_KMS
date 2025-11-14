@@ -1,0 +1,182 @@
+# PKI/KMS Configuration
+
+# Application Settings
+app:
+  name: "Enterprise PKI/KMS"
+  version: "1.0.0"
+  secret_key: "change-this-in-production-to-random-string"
+  debug: true
+  host: "0.0.0.0"
+  port: 5000
+
+# Database Configuration
+database:
+  uri: "sqlite:///data/pki_kms.db"
+  echo: false
+  pool_size: 10
+  max_overflow: 20
+
+# PKI Configuration
+pki:
+  # Root CA Settings
+  root_ca:
+    common_name: "Enterprise Root CA"
+    organization: "Your Organization"
+    organizational_unit: "Security"
+    country: "US"
+    state: "California"
+    locality: "San Francisco"
+    email: "ca@example.com"
+    key_size: 4096
+    hash_algorithm: "SHA256"
+    validity_days: 7300  # 20 years
+    
+  # Intermediate CA Settings
+  intermediate_ca:
+    common_name: "Enterprise Intermediate CA"
+    organization: "Your Organization"
+    organizational_unit: "Security"
+    country: "US"
+    state: "California"
+    locality: "San Francisco"
+    email: "ca@example.com"
+    key_size: 4096
+    hash_algorithm: "SHA256"
+    validity_days: 3650  # 10 years
+  
+  # Certificate Defaults
+  certificates:
+    default_validity_days: 365
+    min_validity_days: 1
+    max_validity_days: 825  # As per CA/Browser Forum baseline requirements
+    key_sizes: [2048, 3072, 4096]
+    default_key_size: 2048
+    hash_algorithms: ["SHA256", "SHA384", "SHA512"]
+    default_hash_algorithm: "SHA256"
+    
+  # CRL Settings
+  crl:
+    enabled: true
+    update_interval_hours: 24
+    validity_days: 30
+    
+  # OCSP Settings
+  ocsp:
+    enabled: true
+    responder_url: "http://ocsp.example.com"
+
+# KMS Configuration
+kms:
+  # Master Key Encryption
+  master_key:
+    algorithm: "AES-256-GCM"
+    rotation_days: 90
+    
+  # Key Generation Defaults
+  symmetric:
+    algorithms: ["AES-128", "AES-192", "AES-256", "ChaCha20"]
+    default_algorithm: "AES-256"
+    
+  asymmetric:
+    algorithms: 
+      - name: "RSA-2048"
+        type: "RSA"
+        key_size: 2048
+      - name: "RSA-4096"
+        type: "RSA"
+        key_size: 4096
+      - name: "ECC-P256"
+        type: "ECC"
+        curve: "SECP256R1"
+      - name: "ECC-P384"
+        type: "ECC"
+        curve: "SECP384R1"
+    default_algorithm: "RSA-2048"
+    
+  # Key Rotation
+  rotation:
+    enabled: true
+    default_policy_days: 90
+    warning_days: 7
+    
+  # Key Backup
+  backup:
+    enabled: true
+    encryption: true
+    location: "data/backups"
+    retention_days: 365
+
+# Security Settings
+security:
+  # Password Policy
+  password:
+    min_length: 12
+    require_uppercase: true
+    require_lowercase: true
+    require_numbers: true
+    require_special: true
+    expiry_days: 90
+    
+  # Session
+  session:
+    timeout_minutes: 30
+    remember_me_days: 7
+    
+  # API
+  api:
+    rate_limit: "100 per hour"
+    require_api_key: true
+    
+  # 2FA
+  two_factor:
+    enabled: false
+    required_for_admin: true
+    
+  # IP Whitelist (empty means allow all)
+  ip_whitelist: []
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "data/logs/pki_kms.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+  
+  # Audit Logging
+  audit:
+    enabled: true
+    file: "data/logs/audit.log"
+    events:
+      - "certificate_created"
+      - "certificate_revoked"
+      - "certificate_renewed"
+      - "key_created"
+      - "key_deleted"
+      - "key_accessed"
+      - "user_login"
+      - "user_logout"
+      - "config_changed"
+
+# Storage Paths
+storage:
+  ca_path: "data/ca"
+  certs_path: "data/certs"
+  keys_path: "data/keys"
+  backups_path: "data/backups"
+  logs_path: "data/logs"
+
+# Email Notifications (optional)
+email:
+  enabled: false
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_user: "your-email@gmail.com"
+  smtp_password: "your-password"
+  from_address: "noreply@example.com"
+  
+  # Notification triggers
+  notifications:
+    certificate_expiring_days: [30, 14, 7, 1]
+    key_rotation_due: true
+    security_alerts: true

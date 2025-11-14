@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Create Encryption Key{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-key"></i> Create New Encryption Key</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('web.create_key') }}">
+                        <!-- Key Name -->
+                        <div class="mb-3">
+                            <label for="key_name" class="form-label">Key Name *</label>
+                            <input type="text" class="form-control" id="key_name" name="key_name" required
+                                   placeholder="e.g., production-encryption-key">
+                            <small class="form-text text-muted">A unique, descriptive name for this key</small>
+                        </div>
+
+                        <!-- Key Type -->
+                        <div class="mb-3">
+                            <label for="key_type" class="form-label">Key Type *</label>
+                            <select class="form-select" id="key_type" name="key_type" required onchange="updateKeyOptions()">
+                                <option value="">Select key type...</option>
+                                <option value="symmetric">Symmetric (AES) - For encryption/decryption</option>
+                                <option value="asymmetric">Asymmetric (RSA/ECC) - For signing/encryption</option>
+                            </select>
+                            <small class="form-text text-muted">Choose based on your use case</small>
+                        </div>
+
+                        <!-- Algorithm Selection (Dynamic) -->
+                        <div class="mb-3" id="algorithm_section" style="display: none;">
+                            <label for="algorithm" class="form-label">Algorithm *</label>
+                            <select class="form-select" id="algorithm" name="algorithm" required>
+                                <option value="">Select algorithm...</option>
+                                <!-- Symmetric options -->
+                                <optgroup label="Symmetric Algorithms" id="symmetric_algos" style="display: none;">
+                                    <option value="AES-128">AES-128 (Fast, Standard Security)</option>
+                                    <option value="AES-192">AES-192 (Balanced)</option>
+                                    <option value="AES-256" selected>AES-256 (Maximum Security)</option>
+                                </optgroup>
+                                <!-- Asymmetric options -->
+                                <optgroup label="Asymmetric Algorithms" id="asymmetric_algos" style="display: none;">
+                                    <option value="RSA-2048">RSA-2048 (Standard)</option>
+                                    <option value="RSA-3072">RSA-3072 (High Security)</option>
+                                    <option value="RSA-4096">RSA-4096 (Maximum Security)</option>
+                                    <option value="ECC-P256">ECC P-256 (Fast, Standard)</option>
+                                    <option value="ECC-P384">ECC P-384 (High Security)</option>
+                                    <option value="ECC-P521">ECC P-521 (Maximum Security)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <!-- Key Purpose -->
+                        <div class="mb-3">
+                            <label for="purpose" class="form-label">Key Purpose *</label>
+                            <select class="form-select" id="purpose" name="purpose" required>
+                                <option value="">Select purpose...</option>
+                                <option value="encryption">Data Encryption</option>
+                                <option value="decryption">Data Decryption</option>
+                                <option value="signing">Digital Signing</option>
+                                <option value="verification">Signature Verification</option>
+                                <option value="general">General Purpose</option>
+                            </select>
+                            <small class="form-text text-muted">What will this key be used for?</small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"
+                                      placeholder="Optional description of this key's purpose and use case"></textarea>
+                        </div>
+
+                        <!-- Key Rotation Policy -->
+                        <div class="mb-3">
+                            <label for="rotation_days" class="form-label">Key Rotation Policy (Days)</label>
+                            <input type="number" class="form-control" id="rotation_days" name="rotation_days"
+                                   value="90" min="0" max="3650">
+                            <small class="form-text text-muted">
+                                Automatic key rotation period (0 = no rotation, recommended: 90-180 days)
+                            </small>
+                        </div>
+
+                        <!-- Key Permissions (Checkboxes) -->
+                        <div class="mb-3">
+                            <label class="form-label">Key Permissions</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="allow_export" name="allow_export">
+                                <label class="form-check-label" for="allow_export">
+                                    Allow key export (enable downloading key material)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="allow_backup" name="allow_backup" checked>
+                                <label class="form-check-label" for="allow_backup">
+                                    Enable automatic backup
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="allow_destroy" name="allow_destroy">
+                                <label class="form-check-label" for="allow_destroy">
+                                    Allow key deletion (WARNING: Cannot be recovered)
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{{ url_for('web.keys') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-key"></i> Generate Key
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Key Types Guide</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><strong>Symmetric Keys (AES)</strong></h6>
+                            <p class="small">
+                                <strong>Use for:</strong> Fast encryption/decryption of large amounts of data<br>
+                                <strong>Security:</strong> Same key for encryption and decryption<br>
+                                <strong>Performance:</strong> Very fast<br>
+                                <strong>Example:</strong> Database encryption, file encryption
+                            </p>
+                            
+                            <h6><strong>AES Strength:</strong></h6>
+                            <ul class="small">
+                                <li><strong>AES-128:</strong> Fast, suitable for most use cases</li>
+                                <li><strong>AES-192:</strong> Extra security margin</li>
+                                <li><strong>AES-256:</strong> Maximum security (recommended)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><strong>Asymmetric Keys (RSA/ECC)</strong></h6>
+                            <p class="small">
+                                <strong>Use for:</strong> Digital signatures, key exchange, authentication<br>
+                                <strong>Security:</strong> Public/private key pair<br>
+                                <strong>Performance:</strong> Slower than symmetric<br>
+                                <strong>Example:</strong> Code signing, secure messaging
+                            </p>
+                            
+                            <h6><strong>RSA vs ECC:</strong></h6>
+                            <ul class="small">
+                                <li><strong>RSA:</strong> Widely supported, larger keys</li>
+                                <li><strong>ECC:</strong> Smaller keys, equivalent security, faster</li>
+                                <li><strong>Recommendation:</strong> RSA-3072+ or ECC P-256+</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3 mb-0">
+                        <strong><i class="fas fa-shield-alt"></i> Security Best Practices:</strong>
+                        <ul class="mb-0 mt-2 small">
+                            <li>Enable key rotation (90-180 days recommended)</li>
+                            <li>Use AES-256 or RSA-3072+ for sensitive data</li>
+                            <li>Keep backups enabled for key recovery</li>
+                            <li>Limit key export to authorized administrators only</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateKeyOptions() {
+    const keyType = document.getElementById('key_type').value;
+    const algorithmSection = document.getElementById('algorithm_section');
+    const symmetricAlgos = document.getElementById('symmetric_algos');
+    const asymmetricAlgos = document.getElementById('asymmetric_algos');
+    
+    if (keyType === 'symmetric') {
+        algorithmSection.style.display = 'block';
+        symmetricAlgos.style.display = 'block';
+        asymmetricAlgos.style.display = 'none';
+        // Select first symmetric option
+        document.querySelector('#symmetric_algos option[value="AES-256"]').selected = true;
+    } else if (keyType === 'asymmetric') {
+        algorithmSection.style.display = 'block';
+        symmetricAlgos.style.display = 'none';
+        asymmetricAlgos.style.display = 'block';
+        // Select first asymmetric option
+        document.querySelector('#asymmetric_algos option[value="RSA-2048"]').selected = true;
+    } else {
+        algorithmSection.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

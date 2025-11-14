@@ -1,0 +1,116 @@
+# Environment variables
+.env
+.flaskenv
+.env.*
+
+# Python
+*.pyc
+*.py[cod]
+*$py.class
+*.so
+__pycache__/
+*.egg-info/
+dist/
+build/
+*.egg
+MANIFEST
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+instance/*.db
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# Data directories
+data/
+instance/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Certificates and Private Keys (CRITICAL - Keep secure!)
+*.key
+*.crt
+*.csr
+*.pem
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+certs/
+keys/
+private/
+*.secret
+
+# Virtual Environments
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing and Coverage
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+test-results/
+test_*.json
+*_test_results.md
+TEST_*.md
+FINAL_TEST_*.md
+OPTIMIZATION_*.md
+
+# Backups
+*.bak
+*.backup
+*.tmp
+*.temp
+
+# OS specific
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.AppleDouble
+.LSOverride
+*.lnk
+ehthumbs.db
+
+# Documentation builds
+docs/_build/
+site/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter
+.ipynb_checkpoints
+
+# pyenv
+.python-version

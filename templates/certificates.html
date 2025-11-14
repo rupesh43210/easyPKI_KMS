@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Certificates - PKI/KMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-file-earmark-lock"></i> Certificates</h1>
+            <div class="btn-group">
+                <a href="{{ url_for('web.create_certificate') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create Certificate
+                </a>
+                <a href="{{ url_for('web.sign_csr') }}" class="btn btn-success">
+                    <i class="fas fa-file-signature"></i> Sign CSR
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" name="search" placeholder="Search..." 
+                               value="{{ request.args.get('search', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="status">
+                            <option value="">All Status</option>
+                            <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
+                            <option value="revoked" {% if request.args.get('status') == 'revoked' %}selected{% endif %}>Revoked</option>
+                            <option value="expired" {% if request.args.get('status') == 'expired' %}selected{% endif %}>Expired</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="type">
+                            <option value="">All Types</option>
+                            <option value="server" {% if request.args.get('type') == 'server' %}selected{% endif %}>Server</option>
+                            <option value="client" {% if request.args.get('type') == 'client' %}selected{% endif %}>Client</option>
+                            <option value="email" {% if request.args.get('type') == 'email' %}selected{% endif %}>Email</option>
+                            <option value="code_signing" {% if request.args.get('type') == 'code_signing' %}selected{% endif %}>Code Signing</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Filter
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ url_for('web.certificates') }}" class="btn btn-secondary w-100">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Certificates Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Common Name</th>
+                                <th>Serial Number</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Valid Until</th>
+                                <th>Days Left</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cert in certificates.items %}
+                            <tr>
+                                <td>{{ cert.id }}</td>
+                                <td>
+                                    <a href="{{ url_for('web.certificate_detail', cert_id=cert.id) }}">
+                                        <strong>{{ cert.common_name }}</strong>
+                                    </a>
+                                </td>
+                                <td><code>{{ cert.serial_number[:16] }}...</code></td>
+                                <td><span class="badge bg-secondary">{{ cert.cert_type }}</span></td>
+                                <td>
+                                    {% if cert.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% elif cert.status == 'revoked' %}
+                                    <span class="badge bg-danger">Revoked</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ cert.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="utc-timestamp">{{ cert.not_after.isoformat() }}</span></td>
+                                <td>
+                                    {% if cert.days_until_expiry() > 30 %}
+                                    <span class="text-success">{{ cert.days_until_expiry() }} days</span>
+                                    {% elif cert.days_until_expiry() > 0 %}
+                                    <span class="text-warning">{{ cert.days_until_expiry() }} days</span>
+                                    {% else %}
+                                    <span class="text-danger">Expired</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('web.certificate_detail', cert_id=cert.id) }}" 
+                                       class="btn btn-sm btn-info" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if cert.status == 'active' and (current_user.is_admin() or current_user.role == 'operator') %}
+                                    <button class="btn btn-sm btn-danger" onclick="showRevokeModal({{ cert.id }}, '{{ cert.common_name }}', '{{ cert.serial_number }}')" title="Revoke">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">No certificates found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if certificates.pages > 1 %}
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if certificates.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('web.certificates', page=certificates.prev_num) }}">Previous</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in certificates.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                            {% if page_num %}
+                            <li class="page-item {% if page_num == certificates.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('web.certificates', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if certificates.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('web.certificates', page=certificates.next_num) }}">Next</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revoke Certificate Modal -->
+<div class="modal fade" id="revokeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Revoke Certificate</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> Certificate revocation is permanent and cannot be undone (except for certificateHold).
+                </div>
+                
+                <p><strong>Certificate:</strong> <span id="revokeCertName"></span></p>
+                <p><strong>Serial:</strong> <code id="revokeCertSerial"></code></p>
+                
+                <div class="mb-3">
+                    <label for="revokeReason" class="form-label">Revocation Reason *</label>
+                    <select class="form-select" id="revokeReason" required>
+                        <option value="unspecified">Unspecified</option>
+                        <option value="keyCompromise">Key Compromise</option>
+                        <option value="cACompromise">CA Compromise</option>
+                        <option value="affiliationChanged">Affiliation Changed</option>
+                        <option value="superseded">Superseded</option>
+                        <option value="cessationOfOperation">Cessation of Operation</option>
+                        <option value="certificateHold">Certificate Hold (Temporary)</option>
+                    </select>
+                    <small class="form-text text-muted">
+                        Select the reason for revoking this certificate. See <a href="/docs/CERTIFICATE_REVOCATION.md" target="_blank">documentation</a> for details.
+                    </small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="revokeNotes" class="form-label">Notes (Optional)</label>
+                    <textarea class="form-control" id="revokeNotes" rows="3" 
+                              placeholder="Additional information about this revocation..."></textarea>
+                </div>
+                
+                <div class="alert alert-info">
+                    <strong>Common Revocation Reasons:</strong>
+                    <ul class="mb-0 small">
+                        <li><strong>Key Compromise:</strong> Private key exposed or stolen</li>
+                        <li><strong>Superseded:</strong> Replaced with a new certificate</li>
+                        <li><strong>Cessation of Operation:</strong> Service no longer active</li>
+                        <li><strong>Certificate Hold:</strong> Temporary suspension (can be reversed)</li>
+                    </ul>
+                </div>
+                
+                <input type="hidden" id="revokeCertId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmRevoke()">
+                    <i class="bi bi-x-circle"></i> Revoke Certificate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showRevokeModal(certId, certName, certSerial) {
+    document.getElementById('revokeCertId').value = certId;
+    document.getElementById('revokeCertName').textContent = certName;
+    document.getElementById('revokeCertSerial').textContent = certSerial;
+    document.getElementById('revokeReason').value = 'unspecified';
+    document.getElementById('revokeNotes').value = '';
+    
+    var modal = new bootstrap.Modal(document.getElementById('revokeModal'));
+    modal.show();
+}
+
+function confirmRevoke() {
+    const certId = document.getElementById('revokeCertId').value;
+    const reason = document.getElementById('revokeReason').value;
+    const notes = document.getElementById('revokeNotes').value;
+    
+    if (confirm('Are you absolutely sure you want to revoke this certificate? This action cannot be undone (except for certificateHold).')) {
+        fetch(`/api/v1/certificates/${certId}/revoke`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                reason: reason,
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Certificate revoked successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to revoke certificate'));
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+        
+        // Close modal
+        bootstrap.Modal.getInstance(document.getElementById('revokeModal')).hide();
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <!-- Profile Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-user"></i> Profile Information</h4>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('web.profile') }}">
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">Username:</label>
+                            <div class="col-sm-9">
+                                <input type="text" readonly class="form-control-plaintext" 
+                                       value="{{ current_user.username }}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="email" class="col-sm-3 col-form-label">Email *</label>
+                            <div class="col-sm-9">
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ current_user.email }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="full_name" class="col-sm-3 col-form-label">Full Name</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="full_name" name="full_name" 
+                                       value="{{ current_user.full_name or '' }}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">Role:</label>
+                            <div class="col-sm-9">
+                                <span class="badge bg-{% if current_user.role == 'admin' %}danger{% elif current_user.role == 'operator' %}warning{% else %}info{% endif %} fs-6">
+                                    {{ current_user.role|upper }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">Account Created:</label>
+                            <div class="col-sm-9">
+                                <input type="text" readonly class="form-control-plaintext" 
+                                       value="{{ current_user.created_at.strftime('%Y-%m-%d %H:%M') if current_user.created_at else 'N/A' }}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">Last Login:</label>
+                            <div class="col-sm-9">
+                                <input type="text" readonly class="form-control-plaintext" 
+                                       value="{{ current_user.last_login.strftime('%Y-%m-%d %H:%M') if current_user.last_login else 'Never' }}">
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{{ url_for('web.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Security Section -->
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-shield-alt"></i> Security Settings</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>Change Password</h5>
+                            <p class="text-muted">Update your password regularly for better security</p>
+                            <a href="{{ url_for('web.change_password') }}" class="btn btn-warning">
+                                <i class="fas fa-key"></i> Change Password
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Two-Factor Authentication</h5>
+                            <p class="text-muted">Add an extra layer of security to your account</p>
+                            <button class="btn btn-info" disabled>
+                                <i class="fas fa-mobile-alt"></i> Enable 2FA (Coming Soon)
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <h5>Account Activity</h5>
+                            <p class="text-muted">Recent login attempts and account activities</p>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Activity logging feature coming soon
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-lock"></i> Your Permissions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Certificate Operations</h6>
+                            <ul>
+                                <li><i class="fas fa-check text-success"></i> View Certificates</li>
+                                <li><i class="fas fa-{% if current_user.role in ['admin', 'operator'] %}check text-success{% else %}times text-danger{% endif %}"></i> Create Certificates</li>
+                                <li><i class="fas fa-{% if current_user.role == 'admin' %}check text-success{% else %}times text-danger{% endif %}"></i> Revoke Certificates</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Key Management</h6>
+                            <ul>
+                                <li><i class="fas fa-check text-success"></i> View Keys</li>
+                                <li><i class="fas fa-{% if current_user.role in ['admin', 'operator'] %}check text-success{% else %}times text-danger{% endif %}"></i> Create Keys</li>
+                                <li><i class="fas fa-{% if current_user.role == 'admin' %}check text-success{% else %}times text-danger{% endif %}"></i> Rotate Keys</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>User Management</h6>
+                            <ul>
+                                <li><i class="fas fa-{% if current_user.role == 'admin' %}check text-success{% else %}times text-danger{% endif %}"></i> Create Users</li>
+                                <li><i class="fas fa-{% if current_user.role == 'admin' %}check text-success{% else %}times text-danger{% endif %}"></i> Modify Users</li>
+                                <li><i class="fas fa-{% if current_user.role == 'admin' %}check text-success{% else %}times text-danger{% endif %}"></i> Delete Users</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>System Settings</h6>
+                            <ul>
+                                <li><i class="fas fa-check text-success"></i> View Audit Logs</li>
+                                <li><i class="fas fa-{% if current_user.role == 'admin' %}check text-success{% else %}times text-danger{% endif %}"></i> Modify Configuration</li>
+                                <li><i class="fas fa-{% if current_user.role == 'admin' %}check text-success{% else %}times text-danger{% endif %}"></i> System Backup</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

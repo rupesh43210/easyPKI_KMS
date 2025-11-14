@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PKI/KMS{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-0"><i class="bi bi-speedometer2"></i> Dashboard</h1>
+        <p class="text-muted">Overview of your PKI/KMS system</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 shadow border-0" style="background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="mb-1 fw-semibold small" style="color: rgba(255,255,255,0.9);">Active Certificates</p>
+                        <h2 class="mb-0 fw-bold" style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ active_certs }}</h2>
+                    </div>
+                    <div class="bg-white rounded-3 p-2" style="background: rgba(255,255,255,0.25) !important;">
+                        <i class="bi bi-shield-check text-white" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <small class="fw-normal" style="color: rgba(255,255,255,0.85);">Valid certificates in use</small>
+                </div>
+            </div>
+            <div class="card-footer border-0 pt-0 pb-3" style="background: transparent;">
+                <a href="{{ url_for('web.certificates') }}" class="text-white text-decoration-none small fw-semibold">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card h-100 shadow border-0" style="background: linear-gradient(135deg, #ed64a6 0%, #e53e3e 100%);">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="mb-1 fw-semibold small" style="color: rgba(255,255,255,0.9);">Expiring Soon</p>
+                        <h2 class="mb-0 fw-bold" style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ expiring_soon }}</h2>
+                    </div>
+                    <div class="bg-white rounded-3 p-2" style="background: rgba(255,255,255,0.25) !important;">
+                        <i class="bi bi-exclamation-triangle text-white" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <small class="fw-normal" style="color: rgba(255,255,255,0.85);">Certificates within 30 days</small>
+                </div>
+            </div>
+            <div class="card-footer border-0 pt-0 pb-3" style="background: transparent;">
+                <a href="{{ url_for('web.certificates') }}" class="text-white text-decoration-none small fw-semibold">
+                    Take action <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card h-100 shadow border-0" style="background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="mb-1 fw-semibold small" style="color: rgba(255,255,255,0.9);">Active Keys</p>
+                        <h2 class="mb-0 fw-bold" style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ active_keys }}</h2>
+                    </div>
+                    <div class="bg-white rounded-3 p-2" style="background: rgba(255,255,255,0.25) !important;">
+                        <i class="bi bi-key-fill text-white" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <small class="fw-normal" style="color: rgba(255,255,255,0.85);">Encryption keys available</small>
+                </div>
+            </div>
+            <div class="card-footer border-0 pt-0 pb-3" style="background: transparent;">
+                <a href="{{ url_for('web.keys') }}" class="text-white text-decoration-none small fw-semibold">
+                    Manage keys <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card h-100 shadow border-0" style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <p class="mb-1 fw-semibold small" style="color: rgba(255,255,255,0.9);">System Status</p>
+                        <h2 class="mb-0 fw-bold" style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><i class="bi bi-check-circle-fill"></i></h2>
+                    </div>
+                    <div class="bg-white rounded-3 p-2" style="background: rgba(255,255,255,0.25) !important;">
+                        <i class="bi bi-heart-pulse text-white" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <small class="fw-normal" style="color: rgba(255,255,255,0.85);">All systems operational</small>
+                </div>
+            </div>
+            <div class="card-footer border-0 pt-0 pb-3" style="background: transparent;">
+                <a href="{{ url_for('web.settings') }}" class="text-white text-decoration-none small fw-semibold">
+                    Settings <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0"><i class="bi bi-lightning-fill text-warning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{{ url_for('web.create_certificate') }}" class="btn btn-outline-primary w-100 py-3 text-start">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="bi bi-file-earmark-plus text-primary" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">Create Certificate</div>
+                                    <small class="text-muted">Issue new certificate</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('web.create_key') }}" class="btn btn-outline-success w-100 py-3 text-start">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="bi bi-plus-circle text-success" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">Generate Key</div>
+                                    <small class="text-muted">Create encryption key</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('web.certificates') }}" class="btn btn-outline-info w-100 py-3 text-start">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="bi bi-search text-info" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">Search</div>
+                                    <small class="text-muted">Find certificates</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/api/v1/docs" class="btn btn-outline-secondary w-100 py-3 text-start">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-secondary bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="bi bi-book text-secondary" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">API Docs</div>
+                                    <small class="text-muted">View documentation</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Certificates and Keys -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-shield-check text-primary"></i> Recent Certificates</h5>
+                    <span class="badge bg-primary">{{ recent_certs|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_certs %}
+                <div class="list-group list-group-flush">
+                    {% for cert in recent_certs %}
+                    <a href="{{ url_for('web.certificate_detail', cert_id=cert.id) }}" class="list-group-item list-group-item-action border-0">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">{{ cert.common_name }}</h6>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="badge bg-secondary text-white">{{ cert.cert_type }}</span>
+                                    {% if cert.status == 'active' %}
+                                    <span class="badge bg-success text-white">Active</span>
+                                    {% elif cert.status == 'revoked' %}
+                                    <span class="badge bg-danger text-white">Revoked</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">{{ cert.status }}</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-clock"></i> <span class="utc-timestamp">{{ cert.created_at.isoformat() }}</span>
+                                </small>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted"></i>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+                    <p class="text-muted mt-2 mb-0">No certificates yet</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white border-0 text-center py-3">
+                <a href="{{ url_for('web.certificates') }}" class="btn btn-sm btn-outline-primary me-2">
+                    <i class="bi bi-list-ul"></i> View All
+                </a>
+                <a href="{{ url_for('web.create_certificate') }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-lg"></i> Create New
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-key-fill text-info"></i> Recent Keys</h5>
+                    <span class="badge bg-info">{{ recent_keys|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_keys %}
+                <div class="list-group list-group-flush">
+                    {% for key in recent_keys %}
+                    <a href="{{ url_for('web.key_detail', key_id=key.id) }}" class="list-group-item list-group-item-action border-0">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">{{ key.name }}</h6>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="badge bg-info text-white">{{ key.algorithm }}</span>
+                                    {% if key.status == 'active' %}
+                                    <span class="badge bg-success text-white">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">{{ key.status }}</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-clock"></i> <span class="utc-timestamp">{{ key.created_at.isoformat() }}</span>
+                                </small>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted"></i>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+                    <p class="text-muted mt-2 mb-0">No keys yet</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white border-0 text-center py-3">
+                <a href="{{ url_for('web.keys') }}" class="btn btn-sm btn-outline-info me-2">
+                    <i class="bi bi-list-ul"></i> View All
+                </a>
+                <a href="{{ url_for('web.create_key') }}" class="btn btn-sm btn-info">
+                    <i class="bi bi-plus-lg"></i> Create New
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity - Moved to Bottom -->
+{% if current_user.is_admin() %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-activity text-success"></i> Recent Activity</h5>
+                    <span class="badge bg-secondary text-white">Last {{ recent_audit|length }} events</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_audit %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 text-dark"><i class="bi bi-clock"></i> Time</th>
+                                <th class="border-0 text-dark"><i class="bi bi-person"></i> User</th>
+                                <th class="border-0 text-dark"><i class="bi bi-tag"></i> Event</th>
+                                <th class="border-0 text-dark"><i class="bi bi-lightning"></i> Action</th>
+                                <th class="border-0 text-center text-dark"><i class="bi bi-check-circle"></i> Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_audit %}
+                            <tr>
+                                <td class="align-middle">
+                                    <small class="text-dark"><span class="utc-timestamp">{{ log.timestamp.isoformat() }}</span></small>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-secondary text-white">{{ log.username }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ log.event_type }}</span>
+                                </td>
+                                <td class="align-middle text-dark">{{ log.action }}</td>
+                                <td class="align-middle text-center">
+                                    {% if log.status == 'success' %}
+                                    <span class="badge bg-success text-white">
+                                        <i class="bi bi-check-circle-fill"></i> Success
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger text-white">
+                                        <i class="bi bi-x-circle-fill"></i> Failure
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+                    <p class="text-muted mt-2 mb-0">No recent activity</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white border-0 text-center py-3">
+                <a href="{{ url_for('web.audit') }}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-journal-text"></i> View All Activity Logs
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

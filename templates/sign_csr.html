@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Sign CSR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-file-signature"></i> Sign Certificate Signing Request (CSR)</h2>
+                    <p class="text-muted">Upload or paste a CSR to sign it with your Intermediate CA</p>
+                </div>
+                <a href="{{ url_for('web.certificates') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Certificates
+                </a>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('web.sign_csr') }}">
+                        <div class="row">
+                            <!-- CSR Input -->
+                            <div class="col-md-12 mb-4">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> <strong>About CSR Signing:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Paste your PEM-encoded CSR below</li>
+                                        <li>The CSR signature will be validated before signing</li>
+                                        <li>Subject information from the CSR will be used</li>
+                                        <li>The certificate will be signed by your Intermediate CA</li>
+                                        <li>Private key remains with the CSR requester (not stored here)</li>
+                                    </ul>
+                                </div>
+
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-file-alt"></i> Certificate Signing Request (PEM Format) *
+                                </label>
+                                <textarea class="form-control font-monospace" 
+                                          name="csr_pem" 
+                                          rows="15" 
+                                          placeholder="-----BEGIN CERTIFICATE REQUEST-----
+MIICijCCAXICAQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx
+...
+-----END CERTIFICATE REQUEST-----" 
+                                          required></textarea>
+                                <small class="form-text text-muted">
+                                    Paste the entire PEM-encoded CSR including BEGIN and END markers
+                                </small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3"><i class="fas fa-cog"></i> Certificate Configuration</h5>
+                        
+                        <div class="row">
+                            <!-- Certificate Type -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Certificate Type *</label>
+                                <select class="form-select" name="cert_type" required>
+                                    <option value="server" selected>Server Authentication (TLS/SSL)</option>
+                                    <option value="client">Client Authentication</option>
+                                    <option value="email">Email Protection (S/MIME)</option>
+                                    <option value="code_signing">Code Signing</option>
+                                </select>
+                                <small class="form-text text-muted">Purpose of the certificate</small>
+                            </div>
+
+                            <!-- Validity Days -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Validity Period (Days) *</label>
+                                <input type="number" class="form-control" name="validity_days" 
+                                       value="365" min="1" max="825" required>
+                                <small class="form-text text-muted">Maximum 825 days per CA/Browser Forum</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Subject Alternative Names (Optional) -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">
+                                    Subject Alternative Names (SAN) 
+                                    <span class="badge bg-secondary">Optional</span>
+                                </label>
+                                <input type="text" class="form-control" name="san_list" 
+                                       placeholder="example.com, www.example.com, *.example.com">
+                                <small class="form-text text-muted">
+                                    Comma-separated list of DNS names (for server certs). Leave empty to use Common Name from CSR.
+                                </small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                            <a href="{{ url_for('web.certificates') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-signature"></i> Sign CSR and Create Certificate
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- How to Generate CSR -->
+            <div class="card mt-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-book"></i> How to Generate a CSR</h5>
+                </div>
+                <div class="card-body">
+                    <h6><i class="fab fa-linux"></i> Using OpenSSL (Linux/Mac/Windows)</h6>
+                    <pre class="bg-dark text-light p-3 rounded"><code># Generate private key
+openssl genrsa -out private.key 2048
+
+# Generate CSR
+openssl req -new -key private.key -out request.csr
+
+# View CSR
+openssl req -in request.csr -noout -text
+
+# View CSR in PEM format (for copying)
+cat request.csr</code></pre>
+
+                    <h6 class="mt-3"><i class="fab fa-windows"></i> Using PowerShell (Windows)</h6>
+                    <pre class="bg-dark text-light p-3 rounded"><code># Generate CSR using Certificate Request
+$cert = New-SelfSignedCertificate -Subject "CN=example.com" -KeyAlgorithm RSA -KeyLength 2048 -NotAfter (Get-Date).AddYears(1) -CertStoreLocation "Cert:\CurrentUser\My" -KeySpec Signature
+
+# Export CSR
+$csr = [Convert]::ToBase64String($cert.GetRawCertData())
+$csrPem = "-----BEGIN CERTIFICATE REQUEST-----`n" + $csr + "`n-----END CERTIFICATE REQUEST-----"
+$csrPem | Out-File -FilePath "request.csr"</code></pre>
+
+                    <h6 class="mt-3"><i class="fas fa-terminal"></i> Using the PKI CLI Tool</h6>
+                    <pre class="bg-dark text-light p-3 rounded"><code># Generate CSR using our CLI
+python cli/pki_tool.py generate-csr --cn "example.com" --org "My Company" --output request.csr</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

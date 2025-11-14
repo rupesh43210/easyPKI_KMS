@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Certificate                                <tr>                        <tr>
+                            <th>Created At</th>
+                            <td><span class="utc-timestamp">{{ certificate.created_at.isoformat() }}</span></td>
+                        </tr>                          <th>Not Valid After</th>
+                            <td><span class="utc-timestamp">{{ certificate.not_after.isoformat() }}</span></td>
+                        </tr>             <tr>
+                            <th>Not Valid Before</th>
+                            <td><span class="utc-timestamp">{{ certificate.not_before.isoformat() }}</span></td>
+                        </tr>ils{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2><i class="fas fa-certificate"></i> Certificate Details</h2>
+                <a href="{{ url_for('web.certificates') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Certificates
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Certificate Information -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Certificate Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="30%">Serial Number:</th>
+                            <td><code>{{ certificate.serial_number }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Common Name:</th>
+                            <td><strong>{{ certificate.common_name }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Certificate Type:</th>
+                            <td>
+                                <span class="badge bg-info">{{ certificate.cert_type|upper }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if certificate.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif certificate.status == 'revoked' %}
+                                    <span class="badge bg-danger">Revoked</span>
+                                {% elif certificate.status == 'expired' %}
+                                    <span class="badge bg-warning">Expired</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ certificate.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Issuer:</th>
+                            <td><small>{{ certificate.issuer }}</small></td>
+                        </tr>
+                        <tr>
+                            <th>Valid From:</th>
+                            <td>{{ certificate.not_before.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Valid Until:</th>
+                            <td>{{ certificate.not_after.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Days Until Expiry:</th>
+                            <td>
+                                {% set days = certificate.days_until_expiry() %}
+                                {% if days < 0 %}
+                                    <span class="text-danger">Expired {{ -days }} days ago</span>
+                                {% elif days < 30 %}
+                                    <span class="text-warning">{{ days }} days (expiring soon!)</span>
+                                {% else %}
+                                    <span class="text-success">{{ days }} days</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Key Size:</th>
+                            <td>{{ certificate.key_size }} bits</td>
+                        </tr>
+                        <tr>
+                            <th>Signature Algorithm:</th>
+                            <td>{{ certificate.signature_algorithm }}</td>
+                        </tr>
+                        <tr>
+                            <th>Created:</th>
+                            <td>{{ certificate.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        </tr>
+                        {% if certificate.created_by %}
+                        <tr>
+                            <th>Created By:</th>
+                            <td>{{ certificate.created_by.username }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Certificate PEM -->
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-code"></i> Certificate PEM</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="copyCertPEM()">
+                            <i class="fas fa-copy"></i> Copy to Clipboard
+                        </button>
+                        <a href="data:text/plain;charset=utf-8,{{ certificate.certificate_pem|urlencode }}" 
+                           download="{{ certificate.serial_number }}.crt" 
+                           class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-download"></i> Download
+                        </a>
+                    </div>
+                    <pre id="certPEM" class="bg-light p-3" style="max-height: 400px; overflow-y: auto;"><code>{{ certificate.certificate_pem }}</code></pre>
+                </div>
+            </div>
+
+            {% if certificate.revocation_reason %}
+            <!-- Revocation Information -->
+            <div class="card mb-4 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-ban"></i> Revocation Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="30%">Revoked At:</th>
+                            <td><span class="utc-timestamp">{{ certificate.revoked_at.isoformat() }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Reason:</th>
+                            <td><strong>{{ certificate.revocation_reason }}</strong></td>
+                        </tr>
+                        {% if certificate.revocation_notes %}
+                        <tr>
+                            <th>Notes:</th>
+                            <td>{{ certificate.revocation_notes }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="data:text/plain;charset=utf-8,{{ certificate.certificate_pem|urlencode }}" 
+                           download="{{ certificate.serial_number }}.crt" 
+                           class="btn btn-primary">
+                            <i class="fas fa-download"></i> Download Certificate
+                        </a>
+                        
+                        <!-- Private Key Download Button -->
+                        {% if current_user.is_admin() or certificate.created_by_id == current_user.id %}
+                        <a href="{{ url_for('web.download_private_key', cert_id=certificate.id) }}" 
+                           class="btn btn-warning"
+                           onclick="return confirm('⚠️ WARNING: Private keys are sensitive!\n\nOnly download if absolutely necessary and store securely.\n\nThis will attempt to download the private key from the server.\n\nContinue?');">
+                            <i class="fas fa-key"></i> Download Private Key
+                        </a>
+                        <small class="text-warning text-center d-block">
+                            <i class="fas fa-exclamation-triangle"></i> Handle with extreme care!
+                        </small>
+                        {% else %}
+                        <button class="btn btn-outline-secondary" disabled title="Only admin or certificate creator can download private keys">
+                            <i class="fas fa-lock"></i> Download Private Key
+                        </button>
+                        <small class="text-muted text-center d-block">Only creator/admin can download</small>
+                        {% endif %}
+                        
+                        {% if certificate.status == 'active' and current_user.is_admin() %}
+                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#revokeModal">
+                            <i class="fas fa-ban"></i> Revoke Certificate
+                        </button>
+                        {% endif %}
+                        
+                        <a href="{{ url_for('web.verify_chain', cert_id=certificate.id) }}" class="btn btn-outline-success">
+                            <i class="fas fa-check-circle"></i> Verify Chain
+                        </a>
+                        
+                        {% if current_user.is_admin() or certificate.created_by_id == current_user.id %}
+                        <a href="{{ url_for('web.export_pkcs12', cert_id=certificate.id) }}" 
+                           class="btn btn-outline-primary"
+                           onclick="return confirm('⚠️ Export certificate as PKCS#12 (.pfx/.p12) bundle?\n\nThis will include both the certificate and private key in a password-protected file.\n\nYou will need to set a password.\n\nContinue?');">
+                            <i class="fas fa-file-archive"></i> Export PKCS#12
+                        </a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary" disabled title="Only admin or certificate creator can export PKCS#12">
+                            <i class="fas fa-file-archive"></i> Export PKCS#12
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <h4>{{ certificate.days_until_expiry()|abs }}</h4>
+                            <small class="text-muted">
+                                {% if certificate.days_until_expiry() < 0 %}
+                                    Days Expired
+                                {% else %}
+                                    Days Remaining
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h4>{{ certificate.key_size }}</h4>
+                            <small class="text-muted">Key Size (bits)</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="mb-1"><strong>File Location:</strong></p>
+                    <small class="text-muted">{{ certificate.file_path if certificate.file_path else 'Not saved to disk' }}</small>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Need Help?</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small">Certificate can be used for:</p>
+                    <ul class="small">
+                        {% if certificate.cert_type == 'server' %}
+                        <li>TLS/SSL web servers</li>
+                        <li>HTTPS endpoints</li>
+                        <li>API gateways</li>
+                        {% elif certificate.cert_type == 'client' %}
+                        <li>Client authentication</li>
+                        <li>Device identification</li>
+                        <li>VPN access</li>
+                        {% elif certificate.cert_type == 'email' %}
+                        <li>Email encryption (S/MIME)</li>
+                        <li>Digital signatures</li>
+                        {% elif certificate.cert_type == 'code_signing' %}
+                        <li>Software signing</li>
+                        <li>Script signing</li>
+                        <li>Binary verification</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revoke Modal -->
+{% if certificate.status == 'active' and current_user.is_admin() %}
+<div class="modal fade" id="revokeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-ban"></i> Revoke Certificate</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to revoke this certificate?</p>
+                <p><strong>Serial: </strong><code>{{ certificate.serial_number }}</code></p>
+                <p><strong>CN: </strong>{{ certificate.common_name }}</p>
+                
+                <form id="revokeForm">
+                    <div class="mb-3">
+                        <label class="form-label">Revocation Reason *</label>
+                        <select class="form-select" id="revocationReason" required>
+                            <option value="">Select reason...</option>
+                            <option value="unspecified">Unspecified</option>
+                            <option value="keyCompromise">Key Compromise</option>
+                            <option value="caCompromise">CA Compromise</option>
+                            <option value="affiliationChanged">Affiliation Changed</option>
+                            <option value="superseded">Superseded</option>
+                            <option value="cessationOfOperation">Cessation of Operation</option>
+                            <option value="certificateHold">Certificate Hold</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="revocationNotes" rows="3" placeholder="Additional information about this revocation..."></textarea>
+                    </div>
+                </form>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmRevoke()">
+                    <i class="fas fa-ban"></i> Revoke Certificate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function copyCertPEM() {
+    const certText = document.getElementById('certPEM').textContent;
+    navigator.clipboard.writeText(certText).then(() => {
+        alert('Certificate PEM copied to clipboard!');
+    });
+}
+
+{% if certificate.status == 'active' and current_user.is_admin() %}
+function confirmRevoke() {
+    const reason = document.getElementById('revocationReason').value;
+    const notes = document.getElementById('revocationNotes').value;
+    
+    if (!reason) {
+        alert('Please select a revocation reason');
+        return;
+    }
+    
+    fetch('/api/v1/certificates/{{ certificate.id }}/revoke', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            reason: reason,
+            notes: notes
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Certificate revoked successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error revoking certificate: ' + error);
+    });
+}
+{% endif %}
+</script>
+{% endblock %}

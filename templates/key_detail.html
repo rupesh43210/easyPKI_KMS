@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}Key Details{% endblock %}
+
+{% block                         <tr>
+                            <th>Created At</th>
+                            <td><span class="utc-timestamp">{{ key.created_at.isoformat() }}</span></td>
+                        </tr>ent %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2><i class="fas fa-key"></i> Encryption Key Details</h2>
+                <a href="{{ url_for('web.keys') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Keys
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Key Information -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Key Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="30%">Key ID:</th>
+                            <td><code>{{ key.key_id }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Name:</th>
+                            <td><strong>{{ key.name }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Description:</th>
+                            <td>{{ key.description if key.description else '<em>No description</em>'|safe }}</td>
+                        </tr>
+                        <tr>
+                            <th>Key Type:</th>
+                            <td>
+                                <span class="badge bg-info">
+                                    {% if key.key_type == 'symmetric' %}
+                                        Symmetric
+                                    {% else %}
+                                        Asymmetric
+                                    {% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Algorithm:</th>
+                            <td><strong>{{ key.algorithm }}</strong></td>
+                        </tr>
+                        {% if key.key_size %}
+                        <tr>
+                            <th>Key Size:</th>
+                            <td>{{ key.key_size }} bits</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Purpose:</th>
+                            <td>
+                                <span class="badge bg-secondary">{{ key.purpose }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if key.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif key.status == 'rotated' %}
+                                    <span class="badge bg-warning">Rotated</span>
+                                {% elif key.status == 'revoked' %}
+                                    <span class="badge bg-danger">Revoked</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ key.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Version:</th>
+                            <td>{{ key.version }}</td>
+                        </tr>
+                        <tr>
+                            <th>Created:</th>
+                            <td>{{ key.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        </tr>
+                        {% if key.created_by %}
+                        <tr>
+                            <th>Created By:</th>
+                            <td>{{ key.created_by.username }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if key.last_used_at %}
+                        <tr>
+                            <th>Last Used:</th>
+                            <td>{{ key.last_used_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Rotation Policy -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-sync"></i> Rotation Policy</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="30%">Rotation Policy:</th>
+                            <td>
+                                {% if key.rotation_policy_days %}
+                                    Every {{ key.rotation_policy_days }} days
+                                {% else %}
+                                    <em>No automatic rotation</em>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if key.next_rotation_at %}
+                        <tr>
+                            <th>Next Rotation:</th>
+                            <td>
+                                {{ key.next_rotation_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% set days = key.days_until_rotation() %}
+                                {% if days %}
+                                    {% if days < 0 %}
+                                        <span class="badge bg-danger">Overdue by {{ -days }} days</span>
+                                    {% elif days < 7 %}
+                                        <span class="badge bg-warning">{{ days }} days remaining</span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ days }} days remaining</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if key.last_rotated_at %}
+                        <tr>
+                            <th>Last Rotated:</th>
+                            <td>{{ key.last_rotated_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Usage Operations -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-lock"></i> Key Operations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6><i class="fas fa-shield-alt"></i> Encrypt Data</h6>
+                            <form id="encryptForm" class="mt-2">
+                                <div class="mb-2">
+                                    <textarea class="form-control form-control-sm" id="plaintext" rows="3" 
+                                              placeholder="Enter text to encrypt..."></textarea>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="encryptData()">
+                                    <i class="fas fa-lock"></i> Encrypt
+                                </button>
+                            </form>
+                            <div id="encryptResult" class="mt-2" style="display:none;">
+                                <label class="form-label small">Encrypted (Base64):</label>
+                                <textarea class="form-control form-control-sm" id="ciphertext" rows="2" readonly></textarea>
+                                <button class="btn btn-sm btn-outline-secondary mt-1" onclick="copyEncrypted()">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6><i class="fas fa-unlock"></i> Decrypt Data</h6>
+                            <form id="decryptForm" class="mt-2">
+                                <div class="mb-2">
+                                    <textarea class="form-control form-control-sm" id="ciphertextInput" rows="3" 
+                                              placeholder="Enter encrypted data (Base64)..."></textarea>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-success" onclick="decryptData()">
+                                    <i class="fas fa-unlock"></i> Decrypt
+                                </button>
+                            </form>
+                            <div id="decryptResult" class="mt-2" style="display:none;">
+                                <label class="form-label small">Decrypted:</label>
+                                <textarea class="form-control form-control-sm" id="decryptedtext" rows="2" readonly></textarea>
+                                <button class="btn btn-sm btn-outline-secondary mt-1" onclick="copyDecrypted()">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info small mb-0">
+                        <i class="fas fa-info-circle"></i> Use the forms above to test encryption/decryption with this key.
+                        Data is processed securely via the API.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if key.status == 'active' %}
+                        <button class="btn btn-warning" onclick="rotateKey()">
+                            <i class="fas fa-sync"></i> Rotate Key
+                        </button>
+                        
+                        {% if current_user.role == 'admin' or key.created_by_id == current_user.id %}
+                        {% set key_desc = "Symmetric Key (" + key.algorithm + "): This is your secret encryption key in base64 format." if key.key_type == "symmetric" else "Asymmetric Key (" + key.algorithm + "): This is your private key in PEM format." %}
+                        <a href="{{ url_for('web.export_key_material', key_id=key.id) }}" 
+                           class="btn btn-primary"
+                           onclick="return confirm('⚠️ WARNING: You are about to download the encryption key!\n\n{{ key_desc }}\nThis key should be kept secure and never shared.\nOnly the creator or admin can export this key.\n\nAre you sure you want to proceed?');">
+                            <i class="fas fa-download"></i> Export Key Material
+                        </a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary" disabled title="Only creator or admin can export keys">
+                            <i class="fas fa-lock"></i> Export Key Material
+                        </button>
+                        {% endif %}
+                        
+                        <button class="btn btn-danger" onclick="revokeKey()">
+                            <i class="fas fa-ban"></i> Revoke Key
+                        </button>
+                        {% else %}
+                        <div class="alert alert-warning small mb-0">
+                            Key is {{ key.status }}. Actions limited.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <h4>{{ key.version }}</h4>
+                            <small class="text-muted">Version</small>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h4>
+                                {% if key.days_until_rotation() %}
+                                    {{ key.days_until_rotation()|abs }}
+                                {% else %}
+                                    ∞
+                                {% endif %}
+                            </h4>
+                            <small class="text-muted">
+                                {% if key.days_until_rotation() %}
+                                    {% if key.days_until_rotation() < 0 %}
+                                        Days Overdue
+                                    {% else %}
+                                        Days to Rotation
+                                    {% endif %}
+                                {% else %}
+                                    No Rotation
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    <hr>
+                    {% if key.key_size %}
+                    <div class="text-center mb-2">
+                        <h5>{{ key.key_size }} bits</h5>
+                        <small class="text-muted">Key Size</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Key Usage</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small"><strong>Algorithm:</strong> {{ key.algorithm }}</p>
+                    <p class="small mb-2">This key can be used for:</p>
+                    <ul class="small">
+                        {% if key.key_type == 'symmetric' %}
+                        <li>Data encryption/decryption</li>
+                        <li>Message authentication</li>
+                        <li>Secure communication</li>
+                        {% else %}
+                        <li>Digital signatures</li>
+                        <li>Key exchange</li>
+                        <li>Asymmetric encryption</li>
+                        {% endif %}
+                    </ul>
+                    <hr>
+                    <p class="small mb-1"><strong>Security Note:</strong></p>
+                    <p class="small text-muted">The actual key material is encrypted and stored securely. 
+                    It cannot be exported or viewed directly.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function encryptData() {
+    const plaintext = document.getElementById('plaintext').value;
+    if (!plaintext) {
+        alert('Please enter text to encrypt');
+        return;
+    }
+    
+    fetch('/api/v1/keys/{{ key.id }}/encrypt', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            plaintext: plaintext
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('ciphertext').value = data.ciphertext;
+            document.getElementById('encryptResult').style.display = 'block';
+        } else {
+            alert('Error: ' + (data.error || 'Encryption failed'));
+        }
+    })
+    .catch(error => {
+        alert('Error encrypting data: ' + error);
+    });
+}
+
+function decryptData() {
+    const ciphertext = document.getElementById('ciphertextInput').value;
+    if (!ciphertext) {
+        alert('Please enter encrypted data');
+        return;
+    }
+    
+    fetch('/api/v1/keys/{{ key.id }}/decrypt', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            ciphertext: ciphertext
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('decryptedtext').value = data.plaintext;
+            document.getElementById('decryptResult').style.display = 'block';
+        } else {
+            alert('Error: ' + (data.error || 'Decryption failed'));
+        }
+    })
+    .catch(error => {
+        alert('Error decrypting data: ' + error);
+    });
+}
+
+function copyEncrypted() {
+    const text = document.getElementById('ciphertext').value;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Encrypted data copied to clipboard!');
+    });
+}
+
+function copyDecrypted() {
+    const text = document.getElementById('decryptedtext').value;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Decrypted data copied to clipboard!');
+    });
+}
+
+function rotateKey() {
+    if (!confirm('Are you sure you want to rotate this key? A new version will be created and the current key will be marked as rotated.')) {
+        return;
+    }
+    
+    // Create form and submit
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for("web.rotate_key", key_id=key.id) }}';
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function revokeKey() {
+    alert('Key revocation feature coming soon!');
+}
+</script>
+{% endblock %}
