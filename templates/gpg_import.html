@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Import GPG Key - PKI/KMS System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-upload"></i> Import GPG Key</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="key_file" class="form-label">Upload Key File</label>
+                            <input type="file" class="form-control" id="key_file" name="key_file" accept=".asc,.gpg,.key">
+                            <div class="form-text">Select a GPG key file (.asc, .gpg, .key)</div>
+                        </div>
+
+                        <div class="text-center my-3">
+                            <strong>OR</strong>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="key_data" class="form-label">Paste Key Data</label>
+                            <textarea class="form-control" id="key_data" name="key_data" rows="10" 
+                                      placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----
+...
+-----END PGP PUBLIC KEY BLOCK-----"></textarea>
+                            <div class="form-text">Paste the ASCII-armored GPG key</div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            You can import both public and private keys. Private keys should be kept secure.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('web.gpg_keys') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Import Key
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

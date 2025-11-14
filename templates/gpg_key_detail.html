@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}GPG Key Details - PKI/KMS System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-shield-check"></i> GPG Key Details</h2>
+        <a href="{{ url_for('web.gpg_keys') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Keys
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5>Key Information</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Fingerprint</dt>
+                <dd class="col-sm-9"><code>{{ key.fingerprint }}</code></dd>
+
+                <dt class="col-sm-3">Key ID</dt>
+                <dd class="col-sm-9"><code>{{ key.key_id }}</code></dd>
+
+                <dt class="col-sm-3">Type</dt>
+                <dd class="col-sm-9">
+                    {{ key.type }} 
+                    {% if key.has_private %}
+                    <span class="badge bg-success"><i class="bi bi-key-fill"></i> Private Key Available</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-3">Length</dt>
+                <dd class="col-sm-9">{{ key.length }} bits</dd>
+
+                <dt class="col-sm-3">Algorithm</dt>
+                <dd class="col-sm-9">{{ key.algorithm }}</dd>
+
+                <dt class="col-sm-3">Created</dt>
+                <dd class="col-sm-9"><span class="timestamp" data-timestamp="{{ key.created }}">{{ key.created }}</span></dd>
+
+                <dt class="col-sm-3">Expires</dt>
+                <dd class="col-sm-9">
+                    {% if key.expires %}
+                    <span class="timestamp" data-timestamp="{{ key.expires }}">{{ key.expires }}</span>
+                    {% else %}
+                    <span class="badge bg-success">Never</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-3">Trust Level</dt>
+                <dd class="col-sm-9">
+                    <span class="badge bg-info">{{ key.trust }}</span>
+                </dd>
+
+                <dt class="col-sm-3">User IDs</dt>
+                <dd class="col-sm-9">
+                    <ul class="list-unstyled">
+                        {% for uid in key.uids %}
+                        <li><i class="bi bi-person"></i> {{ uid }}</li>
+                        {% endfor %}
+                    </ul>
+                </dd>
+
+                {% if key.subkeys %}
+                <dt class="col-sm-3">Subkeys</dt>
+                <dd class="col-sm-9">
+                    <span class="badge bg-secondary">{{ key.subkeys|length }} subkey(s)</span>
+                </dd>
+                {% endif %}
+            </dl>
+
+            <hr>
+
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('web.gpg_export_key', fingerprint=key.fingerprint) }}" 
+                   class="btn btn-success">
+                    <i class="bi bi-download"></i> Export Public Key
+                </a>
+                <a href="{{ url_for('web.gpg_encrypt') }}" class="btn btn-primary">
+                    <i class="bi bi-lock-fill"></i> Encrypt with this key
+                </a>
+                {% if key.has_private %}
+                <a href="{{ url_for('web.gpg_sign') }}" class="btn btn-info">
+                    <i class="bi bi-pencil-square"></i> Sign with this key
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

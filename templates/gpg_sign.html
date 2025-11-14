@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Data - PKI/KMS System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-pencil-square"></i> Sign Data</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="data" class="form-label">Data to Sign *</label>
+                            <textarea class="form-control" id="data" name="data" rows="8" required 
+                                      placeholder="Enter the text you want to sign..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="key_id" class="form-label">Signing Key *</label>
+                            {% if keys %}
+                            <select class="form-select" id="key_id" name="key_id" required>
+                                <option value="">Select a private key...</option>
+                                {% for key in keys %}
+                                <option value="{{ key.fingerprint }}">
+                                    {% if key.uids %}{{ key.uids[0] }}{% endif %} 
+                                    ({{ key.key_id[:16] }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                No private keys available. <a href="{{ url_for('web.gpg_generate') }}">Generate a key</a> first.
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="passphrase" class="form-label">Passphrase *</label>
+                            <input type="password" class="form-control" id="passphrase" name="passphrase" required 
+                                   placeholder="Enter your private key passphrase">
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="detach" value="true" id="detach" checked>
+                                <label class="form-check-label" for="detach">
+                                    Create detached signature
+                                </label>
+                            </div>
+                            <div class="form-text">Detached signatures can be distributed separately from the data</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('web.gpg_keys') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                            <button type="submit" class="btn btn-primary" {% if not keys %}disabled{% endif %}>
+                                <i class="bi bi-pencil-square"></i> Sign
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            {% if signature %}
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="bi bi-check-circle"></i> Signature</h5>
+                </div>
+                <div class="card-body">
+                    <textarea class="form-control" rows="12" readonly id="signatureData">{{ signature }}</textarea>
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-success" onclick="copyToClipboard()">
+                            <i class="bi bi-clipboard"></i> Copy to Clipboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-header">
+                    <h5>How to Sign</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Enter the data you want to sign</li>
+                        <li>Select your private key for signing</li>
+                        <li>Enter your passphrase</li>
+                        <li>Choose whether to create a detached signature</li>
+                        <li>Click "Sign" to generate the signature</li>
+                    </ol>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        Digital signatures prove that the data came from you and hasn't been tampered with.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard() {
+    const text = document.getElementById('signatureData');
+    text.select();
+    document.execCommand('copy');
+    alert('Copied to clipboard!');
+}
+</script>
+{% endblock %}

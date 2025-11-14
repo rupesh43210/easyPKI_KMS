@@ -1263,3 +1263,462 @@ def verify_chain(cert_id):
         )
         flash(f'Error verifying certificate chain: {str(e)}', 'error')
         return redirect(url_for('web.certificate_detail', cert_id=cert_id))
+
+
+# ============================================================================
+# GPG KEY MANAGEMENT ROUTES
+# ============================================================================
+
+@web_bp.route('/gpg/keys')
+@login_required
+def gpg_keys():
+    """List all GPG keys"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        # Get both public and private keys
+        public_keys = gpg.list_keys(secret=False)
+        private_keys = gpg.list_keys(secret=True)
+        
+        # Mark private keys
+        private_fingerprints = {key['fingerprint'] for key in private_keys}
+        for key in public_keys:
+            key['has_private'] = key['fingerprint'] in private_fingerprints
+        
+        AuditLog.log_event(
+            'gpg_list_keys', 'gpg', 'read', 'success',
+            user=current_user, ip_address=request.remote_addr,
+            details={'count': len(public_keys)}
+        )
+        
+        return render_template('gpg_keys.html', keys=public_keys)
+        
+    except Exception as e:
+        flash(f'Error loading GPG keys: {str(e)}', 'error')
+        return redirect(url_for('web.index'))
+
+
+@web_bp.route('/gpg/keys/generate', methods=['GET', 'POST'])
+@login_required
+def gpg_generate():
+    """Generate a new GPG key pair"""
+    if request.method == 'GET':
+        return render_template('gpg_generate.html')
+    
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        # Get form data
+        name = request.form.get('name')
+        email = request.form.get('email')
+        comment = request.form.get('comment', '')
+        key_type = request.form.get('key_type', 'RSA')
+        key_length = int(request.form.get('key_length', 4096))
+        expire_date = request.form.get('expire_date', '0')
+        passphrase = request.form.get('passphrase')
+        
+        # Validate required fields
+        if not all([name, email, passphrase]):
+            flash('Name, email, and passphrase are required', 'error')
+            return redirect(url_for('web.gpg_generate'))
+        
+        # Generate key
+        result = gpg.generate_key(
+            name_real=name,
+            name_email=email,
+            name_comment=comment,
+            key_type=key_type,
+            key_length=key_length,
+            expire_date=expire_date,
+            passphrase=passphrase
+        )
+        
+        if result.get('success'):
+            AuditLog.log_event(
+                'gpg_generate_key', 'gpg', 'create', 'success',
+                user=current_user, ip_address=request.remote_addr,
+                details={
+                    'fingerprint': result['fingerprint'],
+                    'key_id': result['key_id'],
+                    'name': name,
+                    'email': email
+                }
+            )
+            flash(f'GPG key generated successfully! Fingerprint: {result["fingerprint"]}', 'success')
+            return redirect(url_for('web.gpg_keys'))
+        else:
+            AuditLog.log_event(
+                'gpg_generate_key', 'gpg', 'create', 'failure',
+                user=current_user, ip_address=request.remote_addr,
+                details={'error': result.get('error')}
+            )
+            flash(f'Failed to generate key: {result.get("error")}', 'error')
+            return redirect(url_for('web.gpg_generate'))
+            
+    except Exception as e:
+        AuditLog.log_event(
+            'gpg_generate_key', 'gpg', 'create', 'failure',
+            user=current_user, ip_address=request.remote_addr,
+            details={'error': str(e)}
+        )
+        flash(f'Error generating GPG key: {str(e)}', 'error')
+        return redirect(url_for('web.gpg_generate'))
+
+
+@web_bp.route('/gpg/keys/<fingerprint>')
+@login_required
+def gpg_key_detail(fingerprint):
+    """View GPG key details"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        key_info = gpg.get_key_info(fingerprint)
+        
+        if not key_info:
+            flash('GPG key not found', 'error')
+            return redirect(url_for('web.gpg_keys'))
+        
+        # Check if private key exists
+        private_keys = gpg.list_keys(secret=True)
+        key_info['has_private'] = any(k['fingerprint'] == fingerprint for k in private_keys)
+        
+        AuditLog.log_event(
+            'gpg_view_key', 'gpg', 'read', 'success',
+            user=current_user, ip_address=request.remote_addr,
+            details={'fingerprint': fingerprint}
+        )
+        
+        return render_template('gpg_key_detail.html', key=key_info)
+        
+    except Exception as e:
+        flash(f'Error loading GPG key: {str(e)}', 'error')
+        return redirect(url_for('web.gpg_keys'))
+
+
+@web_bp.route('/gpg/keys/<fingerprint>/export')
+@login_required
+def gpg_export_key(fingerprint):
+    """Export a GPG key"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        secret = request.args.get('secret', 'false').lower() == 'true'
+        
+        if secret:
+            # For private key export, require passphrase via form
+            flash('Private key export requires passphrase. Use the API endpoint instead.', 'warning')
+            return redirect(url_for('web.gpg_key_detail', fingerprint=fingerprint))
+        
+        # Export public key
+        key_data = gpg.export_public_key(fingerprint)
+        
+        if not key_data:
+            flash('Failed to export key', 'error')
+            return redirect(url_for('web.gpg_key_detail', fingerprint=fingerprint))
+        
+        AuditLog.log_event(
+            'gpg_export_key', 'gpg', 'read', 'success',
+            user=current_user, ip_address=request.remote_addr,
+            details={'fingerprint': fingerprint, 'type': 'public'}
+        )
+        
+        # Return as downloadable file
+        return send_file(
+            io.BytesIO(key_data.encode('utf-8')),
+            mimetype='application/pgp-keys',
+            as_attachment=True,
+            download_name=f'{fingerprint[:16]}_public.asc'
+        )
+        
+    except Exception as e:
+        flash(f'Error exporting GPG key: {str(e)}', 'error')
+        return redirect(url_for('web.gpg_key_detail', fingerprint=fingerprint))
+
+
+@web_bp.route('/gpg/keys/import', methods=['GET', 'POST'])
+@login_required
+def gpg_import_key():
+    """Import a GPG key"""
+    if request.method == 'GET':
+        return render_template('gpg_import.html')
+    
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        # Get key data from file upload or text area
+        if 'key_file' in request.files:
+            file = request.files['key_file']
+            if file.filename:
+                key_data = file.read().decode('utf-8')
+            else:
+                key_data = request.form.get('key_data', '')
+        else:
+            key_data = request.form.get('key_data', '')
+        
+        if not key_data:
+            flash('Please provide a GPG key to import', 'error')
+            return redirect(url_for('web.gpg_import_key'))
+        
+        # Import key
+        result = gpg.import_key(key_data)
+        
+        if result.get('success'):
+            AuditLog.log_event(
+                'gpg_import_key', 'gpg', 'create', 'success',
+                user=current_user, ip_address=request.remote_addr,
+                details={
+                    'count': result['count'],
+                    'fingerprints': result.get('fingerprints', [])
+                }
+            )
+            flash(f'Successfully imported {result["count"]} key(s)', 'success')
+            return redirect(url_for('web.gpg_keys'))
+        else:
+            AuditLog.log_event(
+                'gpg_import_key', 'gpg', 'create', 'failure',
+                user=current_user, ip_address=request.remote_addr,
+                details={'error': result.get('error')}
+            )
+            flash(f'Failed to import key: {result.get("error")}', 'error')
+            return redirect(url_for('web.gpg_import_key'))
+            
+    except Exception as e:
+        AuditLog.log_event(
+            'gpg_import_key', 'gpg', 'create', 'failure',
+            user=current_user, ip_address=request.remote_addr,
+            details={'error': str(e)}
+        )
+        flash(f'Error importing GPG key: {str(e)}', 'error')
+        return redirect(url_for('web.gpg_import_key'))
+
+
+@web_bp.route('/gpg/keys/<fingerprint>/delete', methods=['POST'])
+@login_required
+def gpg_delete_key(fingerprint):
+    """Delete a GPG key"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        secret = request.form.get('delete_private', 'false').lower() == 'true'
+        passphrase = request.form.get('passphrase', '')
+        
+        # Delete key
+        success = gpg.delete_key(fingerprint, secret=secret, passphrase=passphrase if secret else None)
+        
+        if success:
+            AuditLog.log_event(
+                'gpg_delete_key', 'gpg', 'delete', 'success',
+                user=current_user, ip_address=request.remote_addr,
+                details={'fingerprint': fingerprint, 'type': 'private' if secret else 'public'}
+            )
+            flash(f'GPG key deleted successfully', 'success')
+        else:
+            AuditLog.log_event(
+                'gpg_delete_key', 'gpg', 'delete', 'failure',
+                user=current_user, ip_address=request.remote_addr,
+                details={'fingerprint': fingerprint}
+            )
+            flash('Failed to delete GPG key', 'error')
+        
+        return redirect(url_for('web.gpg_keys'))
+        
+    except Exception as e:
+        AuditLog.log_event(
+            'gpg_delete_key', 'gpg', 'delete', 'failure',
+            user=current_user, ip_address=request.remote_addr,
+            details={'fingerprint': fingerprint, 'error': str(e)}
+        )
+        flash(f'Error deleting GPG key: {str(e)}', 'error')
+        return redirect(url_for('web.gpg_keys'))
+
+
+@web_bp.route('/gpg/encrypt', methods=['GET', 'POST'])
+@login_required
+def gpg_encrypt():
+    """Encrypt data with GPG"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        if request.method == 'GET':
+            # Get list of keys for recipient selection
+            keys = gpg.list_keys(secret=False)
+            return render_template('gpg_encrypt.html', keys=keys)
+        
+        # Get form data
+        data = request.form.get('data', '')
+        recipients = request.form.getlist('recipients')
+        
+        if not data or not recipients:
+            flash('Data and at least one recipient are required', 'error')
+            keys = gpg.list_keys(secret=False)
+            return render_template('gpg_encrypt.html', keys=keys)
+        
+        # Encrypt data
+        encrypted = gpg.encrypt(data=data, recipients=recipients)
+        
+        if encrypted:
+            AuditLog.log_event(
+                'gpg_encrypt', 'gpg', 'encrypt', 'success',
+                user=current_user, ip_address=request.remote_addr,
+                details={'recipients': recipients}
+            )
+            keys = gpg.list_keys(secret=False)
+            return render_template('gpg_encrypt.html', keys=keys, encrypted=encrypted)
+        else:
+            AuditLog.log_event(
+                'gpg_encrypt', 'gpg', 'encrypt', 'failure',
+                user=current_user, ip_address=request.remote_addr,
+                details={'recipients': recipients}
+            )
+            flash('Encryption failed', 'error')
+            keys = gpg.list_keys(secret=False)
+            return render_template('gpg_encrypt.html', keys=keys)
+            
+    except Exception as e:
+        flash(f'Error encrypting data: {str(e)}', 'error')
+        return redirect(url_for('web.gpg_keys'))
+
+
+@web_bp.route('/gpg/decrypt', methods=['GET', 'POST'])
+@login_required
+def gpg_decrypt():
+    """Decrypt GPG encrypted data"""
+    if request.method == 'GET':
+        return render_template('gpg_decrypt.html')
+    
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        # Get form data
+        encrypted_data = request.form.get('encrypted_data', '')
+        passphrase = request.form.get('passphrase', '')
+        
+        if not encrypted_data or not passphrase:
+            flash('Encrypted data and passphrase are required', 'error')
+            return render_template('gpg_decrypt.html')
+        
+        # Decrypt data
+        decrypted, metadata = gpg.decrypt(encrypted_data, passphrase=passphrase)
+        
+        if decrypted:
+            AuditLog.log_event(
+                'gpg_decrypt', 'gpg', 'decrypt', 'success',
+                user=current_user, ip_address=request.remote_addr,
+                details={'key_id': metadata.get('key_id')}
+            )
+            return render_template('gpg_decrypt.html', decrypted=decrypted, metadata=metadata)
+        else:
+            AuditLog.log_event(
+                'gpg_decrypt', 'gpg', 'decrypt', 'failure',
+                user=current_user, ip_address=request.remote_addr,
+                details={'error': metadata.get('error')}
+            )
+            flash(f'Decryption failed: {metadata.get("error")}', 'error')
+            return render_template('gpg_decrypt.html')
+            
+    except Exception as e:
+        flash(f'Error decrypting data: {str(e)}', 'error')
+        return render_template('gpg_decrypt.html')
+
+
+@web_bp.route('/gpg/sign', methods=['GET', 'POST'])
+@login_required
+def gpg_sign():
+    """Sign data with GPG"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        if request.method == 'GET':
+            # Get list of private keys for signing
+            keys = gpg.list_keys(secret=True)
+            return render_template('gpg_sign.html', keys=keys)
+        
+        # Get form data
+        data = request.form.get('data', '')
+        key_id = request.form.get('key_id', '')
+        passphrase = request.form.get('passphrase', '')
+        detach = request.form.get('detach', 'true') == 'true'
+        
+        if not all([data, key_id, passphrase]):
+            flash('Data, key, and passphrase are required', 'error')
+            keys = gpg.list_keys(secret=True)
+            return render_template('gpg_sign.html', keys=keys)
+        
+        # Sign data
+        signature = gpg.sign(data=data, keyid=key_id, passphrase=passphrase, detach=detach)
+        
+        if signature:
+            AuditLog.log_event(
+                'gpg_sign', 'gpg', 'sign', 'success',
+                user=current_user, ip_address=request.remote_addr,
+                details={'key_id': key_id, 'detach': detach}
+            )
+            keys = gpg.list_keys(secret=True)
+            return render_template('gpg_sign.html', keys=keys, signature=signature)
+        else:
+            AuditLog.log_event(
+                'gpg_sign', 'gpg', 'sign', 'failure',
+                user=current_user, ip_address=request.remote_addr,
+                details={'key_id': key_id}
+            )
+            flash('Signing failed', 'error')
+            keys = gpg.list_keys(secret=True)
+            return render_template('gpg_sign.html', keys=keys)
+            
+    except Exception as e:
+        flash(f'Error signing data: {str(e)}', 'error')
+        return redirect(url_for('web.gpg_keys'))
+
+
+@web_bp.route('/gpg/verify', methods=['GET', 'POST'])
+@login_required
+def gpg_verify():
+    """Verify GPG signature"""
+    if request.method == 'GET':
+        return render_template('gpg_verify.html')
+    
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        # Get form data
+        signed_data = request.form.get('signed_data', '')
+        signature = request.form.get('signature', '')
+        
+        if not signed_data:
+            flash('Signed data is required', 'error')
+            return render_template('gpg_verify.html')
+        
+        # Verify signature
+        result = gpg.verify(signed_data, signature=signature if signature else None)
+        
+        if result.get('valid'):
+            AuditLog.log_event(
+                'gpg_verify', 'gpg', 'verify', 'success',
+                user=current_user, ip_address=request.remote_addr,
+                details={
+                    'key_id': result.get('key_id'),
+                    'fingerprint': result.get('fingerprint')
+                }
+            )
+        else:
+            AuditLog.log_event(
+                'gpg_verify', 'gpg', 'verify', 'failure',
+                user=current_user, ip_address=request.remote_addr,
+                details={'error': result.get('error')}
+            )
+        
+        return render_template('gpg_verify.html', result=result)
+            
+    except Exception as e:
+        flash(f'Error verifying signature: {str(e)}', 'error')
+        return render_template('gpg_verify.html')

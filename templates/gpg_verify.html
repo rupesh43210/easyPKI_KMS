@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Signature - PKI/KMS System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-shield-check"></i> Verify Signature</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="signed_data" class="form-label">Signed Data *</label>
+                            <textarea class="form-control" id="signed_data" name="signed_data" rows="10" required 
+                                      placeholder="-----BEGIN PGP SIGNED MESSAGE-----
+...
+-----END PGP SIGNATURE-----"></textarea>
+                            <div class="form-text">Paste the signed message or clear-signed data</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="signature" class="form-label">Detached Signature (Optional)</label>
+                            <textarea class="form-control" id="signature" name="signature" rows="5" 
+                                      placeholder="-----BEGIN PGP SIGNATURE-----
+...
+-----END PGP SIGNATURE-----"></textarea>
+                            <div class="form-text">Only needed if you have a detached signature</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('web.gpg_keys') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-shield-check"></i> Verify
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            {% if result %}
+            <div class="card">
+                <div class="card-header {% if result.valid %}bg-success{% else %}bg-danger{% endif %} text-white">
+                    <h5>
+                        {% if result.valid %}
+                        <i class="bi bi-check-circle"></i> Valid Signature
+                        {% else %}
+                        <i class="bi bi-x-circle"></i> Invalid Signature
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if result.valid %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <strong>Signature is valid!</strong>
+                        <p class="mb-0 mt-2">The data has been verified and has not been tampered with.</p>
+                    </div>
+                    
+                    <dl class="row">
+                        {% if result.username %}
+                        <dt class="col-sm-4">Signed by:</dt>
+                        <dd class="col-sm-8">{{ result.username }}</dd>
+                        {% endif %}
+                        
+                        {% if result.key_id %}
+                        <dt class="col-sm-4">Key ID:</dt>
+                        <dd class="col-sm-8"><code>{{ result.key_id }}</code></dd>
+                        {% endif %}
+                        
+                        {% if result.fingerprint %}
+                        <dt class="col-sm-4">Fingerprint:</dt>
+                        <dd class="col-sm-8"><code>{{ result.fingerprint }}</code></dd>
+                        {% endif %}
+                        
+                        {% if result.trust_text %}
+                        <dt class="col-sm-4">Trust Level:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-info">{{ result.trust_text }}</span>
+                        </dd>
+                        {% endif %}
+                        
+                        {% if result.timestamp %}
+                        <dt class="col-sm-4">Signed on:</dt>
+                        <dd class="col-sm-8">
+                            <span class="timestamp" data-timestamp="{{ result.timestamp }}">{{ result.timestamp }}</span>
+                        </dd>
+                        {% endif %}
+                    </dl>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <strong>Signature is invalid!</strong>
+                        <p class="mb-0 mt-2">
+                            {% if result.error %}
+                            {{ result.error }}
+                            {% else %}
+                            The signature does not match the data, or the signer's public key is not available.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-header">
+                    <h5>How to Verify</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Paste the signed message in the first text area</li>
+                        <li>If you have a detached signature, paste it in the second text area</li>
+                        <li>Click "Verify" to check the signature</li>
+                    </ol>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Two types of signatures:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Inline/Clear-signed:</strong> The signature is included with the data</li>
+                            <li><strong>Detached:</strong> The signature is separate from the data</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        You must have the signer's public key in your keyring to verify the signature.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

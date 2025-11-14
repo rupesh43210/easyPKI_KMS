@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Generate GPG Key - PKI/KMS System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="bi bi-shield-check"></i> Generate New GPG Key</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Real Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="John Doe">
+                            <div class="form-text">Your full name</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" id="email" name="email" required 
+                                   placeholder="john@example.com">
+                            <div class="form-text">Your email address</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Comment (Optional)</label>
+                            <input type="text" class="form-control" id="comment" name="comment" 
+                                   placeholder="Work key">
+                            <div class="form-text">Optional comment to identify the key</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="key_type" class="form-label">Key Type *</label>
+                                <select class="form-select" id="key_type" name="key_type" required>
+                                    <option value="RSA" selected>RSA</option>
+                                    <option value="DSA">DSA</option>
+                                    <option value="ECDSA">ECDSA</option>
+                                </select>
+                                <div class="form-text">RSA is recommended</div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="key_length" class="form-label">Key Length *</label>
+                                <select class="form-select" id="key_length" name="key_length" required>
+                                    <option value="2048">2048 bits</option>
+                                    <option value="3072">3072 bits</option>
+                                    <option value="4096" selected>4096 bits (Recommended)</option>
+                                </select>
+                                <div class="form-text">Longer keys are more secure</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="expire_date" class="form-label">Expiration</label>
+                            <select class="form-select" id="expire_date" name="expire_date">
+                                <option value="0" selected>Never expires</option>
+                                <option value="1y">1 year</option>
+                                <option value="2y">2 years</option>
+                                <option value="5y">5 years</option>
+                            </select>
+                            <div class="form-text">Keys can be set to expire automatically</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="passphrase" class="form-label">Passphrase *</label>
+                            <input type="password" class="form-control" id="passphrase" name="passphrase" required>
+                            <div class="form-text">Strong passphrase to protect your private key</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="passphrase_confirm" class="form-label">Confirm Passphrase *</label>
+                            <input type="password" class="form-control" id="passphrase_confirm" name="passphrase_confirm" required>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Note:</strong> Key generation may take a few moments, especially for larger key sizes.
+                            Keep your passphrase safe - it cannot be recovered if lost!
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('web.gpg_keys') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="generateBtn">
+                                <i class="bi bi-plus-circle"></i> Generate Key
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const pass = document.getElementById('passphrase').value;
+    const confirm = document.getElementById('passphrase_confirm').value;
+    
+    if (pass !== confirm) {
+        e.preventDefault();
+        alert('Passphrases do not match!');
+        return false;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+});
+</script>
+{% endblock %}
