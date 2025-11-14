@@ -1269,10 +1269,31 @@ def verify_chain(cert_id):
 # GPG KEY MANAGEMENT ROUTES
 # ============================================================================
 
+def check_gpg_available():
+    """Check if GPG binary is available on the system"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        # Try a simple operation to verify GPG works
+        gpg.list_keys()
+        return True, None
+    except OSError as e:
+        if "Unable to run gpg" in str(e):
+            return False, "GPG binary not found. Please install GPG4Win from https://gpg4win.org/download.html"
+        return False, str(e)
+    except Exception as e:
+        return False, str(e)
+
 @web_bp.route('/gpg/keys')
 @login_required
 def gpg_keys():
     """List all GPG keys (full page)"""
+    # Check if GPG is available
+    gpg_available, error_msg = check_gpg_available()
+    if not gpg_available:
+        flash(f'PGP/GPG functionality requires GPG to be installed. {error_msg}', 'warning')
+        return render_template('gpg_keys.html', keys=[], gpg_not_available=True, error_message=error_msg)
+    
     try:
         from app.gpg import GPGManager
         gpg = GPGManager()
@@ -1303,6 +1324,23 @@ def gpg_keys():
 @login_required
 def gpg_keys_fragment():
     """Get GPG keys as HTML fragment for embedding in tabs"""
+    # Check if GPG is available
+    gpg_available, error_msg = check_gpg_available()
+    if not gpg_available:
+        return f'''
+        <div class="alert alert-warning">
+            <h5><i class="bi bi-exclamation-triangle"></i> GPG Not Installed</h5>
+            <p>{error_msg}</p>
+            <p class="mb-2"><strong>To enable PGP/GPG features:</strong></p>
+            <ol class="mb-3">
+                <li>Download and install <strong>GPG4Win</strong> from: <a href="https://gpg4win.org/download.html" target="_blank">gpg4win.org</a></li>
+                <li>Restart your terminal/PowerShell</li>
+                <li>Restart the application</li>
+            </ol>
+            <p class="mb-0"><small>See <code>docs/GPG_SETUP_WINDOWS.md</code> for detailed instructions.</small></p>
+        </div>
+        '''
+    
     try:
         from app.gpg import GPGManager
         gpg = GPGManager()
