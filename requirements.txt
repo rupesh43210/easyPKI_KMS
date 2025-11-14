@@ -8,6 +8,7 @@ Flask-CORS==6.0.0
 # Cryptography
 cryptography==44.0.1
 pyOpenSSL==23.3.0
+python-gnupg==0.5.2
 
 # Database
 SQLAlchemy>=2.0.36
