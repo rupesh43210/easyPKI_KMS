@@ -1,0 +1,10 @@
+{
+    "git.autoRepositoryDetection": "subFolders",
+    "git.ignoredRepositories": [
+        "../"
+    ],
+    "git.detectSubmodules": false,
+    "files.exclude": {
+        "**/.git": false
+    }
+}
