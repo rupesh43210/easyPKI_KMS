@@ -12,9 +12,6 @@ from .gpg_manager import GPGManagerfrom .gpg_manager import GPGManager
 
 __all__ = ['GPGManager']__all__ = ['GPGManager']
 
-    """Manages GPG operations for encryption, signing, and key management"""
-    
-    def __init__(self, gnupg_home: Optional[str] = None):
         """
         Initialize GPG Manager
         
