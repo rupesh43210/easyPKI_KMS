@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Generate GPG Key - PKI/KMS System{% endblock %}
+{% block title %}Generate PGP/GPG Key - PKI/KMS System{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,7 +8,7 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h4><i class="bi bi-shield-check"></i> Generate New GPG Key</h4>
+                    <h4><i class="bi bi-shield-check"></i> Generate New PGP/GPG Key</h4>
                 </div>
                 <div class="card-body">
                     <form method="POST">
@@ -79,7 +79,8 @@
 
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle"></i>
-                            <strong>Note:</strong> Key generation may take a few moments, especially for larger key sizes.
+                            <strong>Note:</strong> This generates an OpenPGP-compliant key that works with PGP, GPG, and all standard tools.
+                            Key generation may take a few moments, especially for larger key sizes.
                             Keep your passphrase safe - it cannot be recovered if lost!
                         </div>
 

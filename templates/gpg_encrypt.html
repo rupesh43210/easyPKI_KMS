@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Encrypt Data - PKI/KMS System{% endblock %}
+{% block title %}Encrypt Data - PGP/GPG - PKI/KMS System{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,7 +8,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h4><i class="bi bi-lock-fill"></i> Encrypt Data</h4>
+                    <h4><i class="bi bi-lock-fill"></i> Encrypt Data (PGP/GPG)</h4>
                 </div>
                 <div class="card-body">
                     <form method="POST">
@@ -40,7 +40,7 @@
                             {% else %}
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle"></i>
-                                No GPG keys available. <a href="{{ url_for('web.gpg_generate') }}">Generate</a> or 
+                                No PGP/GPG keys available. <a href="{{ url_for('web.gpg_generate') }}">Generate</a> or 
                                 <a href="{{ url_for('web.gpg_import_key') }}">import</a> a key first.
                             </div>
                             {% endif %}
