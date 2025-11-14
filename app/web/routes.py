@@ -1272,7 +1272,7 @@ def verify_chain(cert_id):
 @web_bp.route('/gpg/keys')
 @login_required
 def gpg_keys():
-    """List all GPG keys"""
+    """List all GPG keys (full page)"""
     try:
         from app.gpg import GPGManager
         gpg = GPGManager()
@@ -1297,6 +1297,29 @@ def gpg_keys():
     except Exception as e:
         flash(f'Error loading GPG keys: {str(e)}', 'error')
         return redirect(url_for('web.index'))
+
+
+@web_bp.route('/gpg/keys/fragment')
+@login_required
+def gpg_keys_fragment():
+    """Get GPG keys as HTML fragment for embedding in tabs"""
+    try:
+        from app.gpg import GPGManager
+        gpg = GPGManager()
+        
+        # Get both public and private keys
+        public_keys = gpg.list_keys(secret=False)
+        private_keys = gpg.list_keys(secret=True)
+        
+        # Mark private keys
+        private_fingerprints = {key['fingerprint'] for key in private_keys}
+        for key in public_keys:
+            key['has_private'] = key['fingerprint'] in private_fingerprints
+        
+        return render_template('gpg_keys_fragment.html', keys=public_keys)
+        
+    except Exception as e:
+        return f'<div class="alert alert-danger">Error loading GPG keys: {str(e)}</div>'
 
 
 @web_bp.route('/gpg/keys/generate', methods=['GET', 'POST'])

@@ -37,11 +37,6 @@
                             <i class="bi bi-key-fill"></i> Keys
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('web.gpg_keys') }}">
-                            <i class="bi bi-shield-check"></i> GPG Keys
-                        </a>
-                    </li>
                     {% if current_user.is_admin() %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('web.users') }}">

@@ -6,10 +6,38 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-key"></i> Encryption Keys</h2>
-        <a href="{{ url_for('web.create_key') }}" class="btn btn-success">
-            <i class="fas fa-plus"></i> Create New Key
-        </a>
+        <div class="dropdown">
+            <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-plus"></i> Create New Key
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('web.create_key') }}">
+                    <i class="bi bi-key"></i> PKI/KMS Key
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('web.gpg_generate') }}">
+                    <i class="bi bi-shield-check"></i> GPG Key
+                </a></li>
+            </ul>
+        </div>
     </div>
+
+    <!-- Tabs for different key types -->
+    <ul class="nav nav-tabs mb-3" id="keyTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="pki-tab" data-bs-toggle="tab" data-bs-target="#pki-keys" type="button">
+                <i class="bi bi-key"></i> PKI/KMS Keys
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="gpg-tab" data-bs-toggle="tab" data-bs-target="#gpg-keys" type="button">
+                <i class="bi bi-shield-check"></i> GPG Keys
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="keyTabContent">
+        <!-- PKI/KMS Keys Tab -->
+        <div class="tab-pane fade show active" id="pki-keys" role="tabpanel">
 
     <!-- Key Statistics -->
     <div class="row mb-4">
@@ -144,9 +172,42 @@
             {% endif %}
         </div>
     </div>
+        </div>
+        <!-- End PKI/KMS Keys Tab -->
+
+        <!-- GPG Keys Tab -->
+        <div class="tab-pane fade" id="gpg-keys" role="tabpanel">
+            <div id="gpg-keys-content">
+                <div class="text-center py-5">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading GPG keys...</p>
+                </div>
+            </div>
+        </div>
+        <!-- End GPG Keys Tab -->
+    </div>
 </div>
 
 <script>
+// Load GPG keys when tab is shown
+document.getElementById('gpg-tab').addEventListener('shown.bs.tab', function (e) {
+    loadGPGKeys();
+});
+
+function loadGPGKeys() {
+    fetch('{{ url_for("web.gpg_keys_fragment") }}')
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('gpg-keys-content').innerHTML = html;
+        })
+        .catch(error => {
+            document.getElementById('gpg-keys-content').innerHTML = 
+                '<div class="alert alert-danger">Error loading GPG keys: ' + error + '</div>';
+        });
+}
+
 function rotateKey(keyId) {
     if (confirm('Are you sure you want to rotate this key? A new version will be created.')) {
         const form = document.createElement('form');
